@@ -4,6 +4,7 @@ import { initDrawTool } from '../annotations/drawTool.js';
 import { initGeoFileImport } from '../ui/geoFileImport.js';
 import { initImageryBoxTool } from '../ui/imageryBoxTool.js';
 import { createRecentImageryPanel } from '../ui/recentImagery.js';
+import { initFireWatchPanel } from '../ui/fireWatch.js';
 import { initGevVoiceCommands } from '../voice/gevRealtime.js';
 import { installViews, isEmbeddedInline } from './embed.js';
 import { installScopeMask, destroyScopeMask } from '../scopeMask.js';
@@ -107,6 +108,10 @@ export function createApplicationTools({
   }
   if (startChrome)
     defer(startChrome({ loadingScreen, styleManager, dataManager, signal }));
+  // Wildfire Watch mounts into #left-panel-stack, so it starts after the chrome
+  // has built the rails. It owns its own disclosure and disposes itself.
+  const fireWatch = initFireWatchPanel({ viewer, dataManager });
+  defer(() => fireWatch?.destroy());
   // Idle render governor: flips the scene into requestRenderMode whenever
   // nothing animates per frame. Installed AFTER every module above has had
   // its chance to register pre-install holds. (perf wave 2)

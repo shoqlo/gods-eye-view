@@ -1,0 +1,240 @@
+/* Wildfire Watch panel. Uses the shared panel tokens so it inherits both the
+   default and Cyber themes without a theme-specific copy. */
+
+#fire-watch-panel .fire-watch-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 12px;
+}
+
+/* The body is toggled with the `hidden` attribute by the panel controller, so
+   display rules elsewhere cannot resurrect it while collapsed. */
+#fire-watch-panel .fire-watch-body[hidden] {
+  display: none !important;
+}
+
+#fire-watch-panel .fire-watch-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: min(52vh, 460px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+}
+
+#fire-watch-panel .fire-watch-posture {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+#fire-watch-panel .fire-watch-conditions {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+#fire-watch-panel .fire-watch-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#fire-watch-panel .fire-watch-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 4px 6px;
+  border-radius: var(--btn-radius);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+#fire-watch-panel .fire-watch-chip {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-radius: var(--btn-radius);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition:
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+#fire-watch-panel .fire-watch-chip:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--glass-border-hover);
+}
+
+#fire-watch-panel .fire-watch-chip:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+
+#fire-watch-panel .fire-watch-chip[aria-pressed='true'],
+#fire-watch-panel .fire-watch-chip.is-active {
+  color: var(--accent);
+  border-color: var(--accent-glow);
+  background: var(--accent-dim);
+}
+
+#fire-watch-panel .fire-watch-chip:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+#fire-watch-panel .fire-watch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#fire-watch-panel .fire-watch-row {
+  border: 1px solid var(--glass-border);
+  border-left: 2px solid var(--band-colour, var(--glass-border));
+  border-radius: var(--btn-radius);
+  background: rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+}
+
+#fire-watch-panel .fire-watch-row[open] {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+#fire-watch-panel .fire-watch-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px;
+  cursor: pointer;
+  list-style: none;
+}
+
+#fire-watch-panel .fire-watch-summary::-webkit-details-marker {
+  display: none;
+}
+
+#fire-watch-panel .fire-watch-summary:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+#fire-watch-panel .fire-watch-band {
+  flex: 0 0 auto;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: var(--band-colour, var(--text-secondary));
+  border: 1px solid var(--band-colour, var(--glass-border));
+}
+
+#fire-watch-panel .fire-watch-score {
+  flex: 0 0 auto;
+  min-width: 18px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--band-colour, var(--text-primary));
+}
+
+#fire-watch-panel .fire-watch-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+#fire-watch-panel .fire-watch-name {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#fire-watch-panel .fire-watch-meta {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#fire-watch-panel .fire-watch-star {
+  color: var(--accent);
+  font-size: 9px;
+}
+
+#fire-watch-panel .fire-watch-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 0 6px 6px;
+}
+
+#fire-watch-panel .fire-watch-reasons {
+  margin: 0;
+  padding-left: 12px;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+
+#fire-watch-panel .fire-watch-components,
+#fire-watch-panel .fire-watch-evidence {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+#fire-watch-panel .fire-watch-actions {
+  display: flex;
+  gap: 6px;
+}
+
+#fire-watch-panel .fire-watch-empty {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+#fire-watch-panel .fire-watch-note {
+  margin: 2px 0 0;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+@media (max-width: 720px) {
+  #fire-watch-panel .fire-watch-body {
+    max-height: none;
+  }
+}
