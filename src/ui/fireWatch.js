@@ -40,10 +40,18 @@ import {
   formatCount,
   zoneMeta,
 } from '../wildfire/display.js';
+import {
+  DEFAULT_SORT,
+  SORT_MODES,
+  filterZones,
+  hasFilters,
+  sortZones,
+} from '../wildfire/filter.js';
 
 const PANEL_ID = 'fire-watch-panel';
 const ENDPOINT = '/api/fire-risk';
 const WATCH_STORAGE_KEY = 'gev.fire-watch.watched';
+const INTRO_STORAGE_KEY = 'gev.fire-watch.intro';
 const REFRESH_MS = 5 * 60_000;
 const REQUEST_LIMIT = 100;
 /** One degree of latitude in kilometres; the framing radius uses it. */
@@ -52,10 +60,36 @@ const KM_PER_DEGREE = 111;
 /** Filter choices, lowest band first. `null` means every band. */
 const BAND_FILTERS = Object.freeze([
   { id: 'all', label: msg('All bands'), minBand: null },
-  { id: 'watch', label: msg('Watch and above'), minBand: 'watch' },
-  { id: 'elevated', label: msg('Elevated and above'), minBand: 'elevated' },
-  { id: 'high', label: msg('High and above'), minBand: 'high' },
+  { id: 'watch', label: msg('Watch and up'), minBand: 'watch' },
+  { id: 'elevated', label: msg('Elevated and up'), minBand: 'elevated' },
+  { id: 'high', label: msg('High and up'), minBand: 'high' },
 ]);
+
+/**
+ * The first-visit card. One short paragraph: what the list is, what to click,
+ * how to keep something, and what the tool is not. Kept to a couple of lines
+ * because a card that fills the panel hides the fires it is explaining.
+ */
+const INTRO_TEXT = msg(
+  'Every fire burning now, ranked by how much attention it warrants. Click one to see why. WATCH keeps it in this list.',
+);
+
+/** What the four components mean, in the order the score weighs them. */
+const HELP_LINES = Object.freeze([
+  msg(
+    'Hazard — how the fire behaves, how much is uncontained, how large it is.',
+  ),
+  msg('Exposure — critical assets near it, and suppression cost per acre.'),
+  msg('Wind — speed, and whether it is pushing the fire at an asset.'),
+  msg('Recency — how long since the perimeter was last updated.'),
+]);
+
+/** Menu labels for the sort modes the filter module offers. */
+const SORT_LABELS = Object.freeze({
+  risk: msg('Risk first'),
+  size: msg('Largest first'),
+  newest: msg('Newest first'),
+});
 
 const el = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -83,6 +117,22 @@ function writeWatched(storage, watched) {
     storage?.setItem(WATCH_STORAGE_KEY, JSON.stringify([...watched]));
   } catch {
     /* private mode or a full quota: the filter still works for this session */
+  }
+}
+
+function readIntroSeen(storage) {
+  try {
+    return storage?.getItem(INTRO_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeIntroSeen(storage) {
+  try {
+    storage?.setItem(INTRO_STORAGE_KEY, '1');
+  } catch {
+    /* private mode: the card returns next visit, which is harmless */
   }
 }
 
@@ -115,6 +165,9 @@ function mountPanel({
     loading: false,
     bandFilter: 'all',
     watchedOnly: false,
+    query: '',
+    sort: DEFAULT_SORT,
+    introSeen: readIntroSeen(storage),
     watched: readWatched(storage),
     destroyed: false,
   };
@@ -128,9 +181,14 @@ function mountPanel({
   const glow = el('div', 'panel-glow');
 
   const inner = el('div', 'fire-watch-inner');
+  // The shared panel-surface contract (docs/panel-surfaces.md): without this
+  // attribute the panel gets none of the glass frame, no width bound and no
+  // allocated height, so it renders as text floating over the imagery.
+  inner.dataset.panelSurface = '';
 
   const header = el('div', 'panel-header');
-  const title = el('span', 'panel-title', t('FIRE WATCH'));
+  header.dataset.panelHeader = '';
+  const title = el('span', 'panel-title panel-surface-title', t('FIRE WATCH'));
   const divider = el('span', 'panel-divider');
   const collapseButton = el('button', 'panel-collapse-btn', '+');
   collapseButton.type = 'button';
@@ -141,6 +199,8 @@ function mountPanel({
   header.append(title, divider, collapseButton);
 
   const body = el('div', 'fire-watch-body');
+  body.dataset.panelBody = '';
+  body.dataset.railScroller = '';
   body.hidden = true;
 
   const posture = el('p', 'fire-watch-posture', t('Reading the live index…'));
@@ -148,6 +208,35 @@ function mountPanel({
   posture.setAttribute('aria-live', 'polite');
 
   const conditions = el('p', 'fire-watch-conditions', '');
+
+  // The first-visit card. It sits above the search because a reader who does
+  // not yet know what the numbers mean will not use the search.
+  const intro = el('div', 'fire-watch-intro');
+  intro.hidden = state.introSeen;
+  const introCopy = el('p', 'fire-watch-intro-text', t(INTRO_TEXT));
+  const introDismiss = el('button', 'fire-watch-chip', t('GOT IT'));
+  introDismiss.type = 'button';
+  intro.append(introCopy, introDismiss);
+
+  // One field, not three: a reader looking for a specific fire has a name, a
+  // state or an ID, and does not want to know which of those is "supported".
+  const searchWrap = el('div', 'fire-watch-search');
+  const searchInput = el('input', 'fire-watch-search-input');
+  searchInput.type = 'search';
+  searchInput.id = 'fire-watch-search';
+  searchInput.placeholder = t('Search a fire, a state or an ID');
+  searchInput.setAttribute('aria-label', t('Search a fire, a state or an ID'));
+  const clearButton = el(
+    'button',
+    'fire-watch-chip fire-watch-clear',
+    // "CLEAR" on its own is the weather word for a clear sky; the button needs
+    // the action entry, which the imagery panel already established.
+    t('CLEAR', { context: 'action' }),
+  );
+  clearButton.type = 'button';
+  clearButton.title = t('Clear the search and filters');
+  clearButton.hidden = true;
+  searchWrap.append(searchInput, clearButton);
 
   const controls = el('div', 'fire-watch-controls');
   const bandSelect = el('select', 'fire-watch-select');
@@ -158,18 +247,48 @@ function mountPanel({
     option.value = filter.id;
     bandSelect.append(option);
   }
+
+  const sortSelect = el('select', 'fire-watch-select');
+  sortSelect.id = 'fire-watch-sort';
+  sortSelect.setAttribute('aria-label', t('Order the list'));
+  for (const mode of SORT_MODES) {
+    const option = el('option', null, t(SORT_LABELS[mode]));
+    option.value = mode;
+    sortSelect.append(option);
+  }
+
   const watchedButton = el('button', 'fire-watch-chip', t('WATCHED'));
   watchedButton.type = 'button';
   watchedButton.setAttribute('aria-pressed', 'false');
+  watchedButton.title = t('Show only the fires on your list');
+
   const refreshButton = el('button', 'fire-watch-chip', t('REFRESH'));
   refreshButton.type = 'button';
-  controls.append(bandSelect, watchedButton, refreshButton);
+  controls.append(bandSelect, sortSelect, watchedButton, refreshButton);
 
   const list = el('div', 'fire-watch-list');
   list.setAttribute('aria-label', t('Ranked incidents'));
 
   const empty = el('p', 'fire-watch-empty', '');
   empty.hidden = true;
+
+  // The answer to "why this number?", available without leaving the panel.
+  const help = el('details', 'fire-watch-help');
+  help.append(
+    el('summary', 'fire-watch-help-summary', t('WHAT THE SCORE MEANS')),
+  );
+  const helpList = el('ul', 'fire-watch-help-list');
+  for (const line of HELP_LINES) helpList.append(el('li', null, t(line)));
+  help.append(helpList);
+  help.append(
+    el(
+      'p',
+      'fire-watch-help-meta',
+      t(
+        'Confidence says how much of the record the score had. Missing behaviour or containment caps it.',
+      ),
+    ),
+  );
 
   const note = el(
     'p',
@@ -179,18 +298,29 @@ function mountPanel({
     ),
   );
 
-  body.append(posture, conditions, controls, list, empty, note);
+  // Reading order: what is in the list, how to narrow it, the list itself, then
+  // the provenance and the caveat. The sources line used to sit above the
+  // search, where it pushed the first fire off a short rail.
+  body.append(
+    posture,
+    intro,
+    searchWrap,
+    controls,
+    list,
+    empty,
+    help,
+    conditions,
+    note,
+  );
   inner.append(header, body);
   panel.append(glow, inner);
 
-  // Sit directly under the DATA LAYERS launcher, which is where a fire watch
-  // belongs: above the imagery panels, below the layer toggles people use first.
-  const dataPanel = documentRef.getElementById('data-panel');
-  if (dataPanel?.parentElement === stack) {
-    stack.insertBefore(panel, dataPanel.nextSibling);
-  } else {
-    stack.prepend(panel);
-  }
+  // First in the rail, not second. `layoutLeftPanelRail` keeps its first
+  // expanded panel and collapses the competitors when the corridor is short, so
+  // a list mounted under DATA LAYERS is folded away the moment it opens. Leading
+  // the stack makes the list the primary surface, and an explicit open from
+  // another panel still wins because the chrome passes its id as preferred.
+  stack.prepend(panel);
 
   /* ------------------------------------------------------------- disclosure */
 
@@ -219,15 +349,42 @@ function mountPanel({
 
   function visibleZones() {
     const zones = state.payload?.zones ?? [];
-    const filter = BAND_FILTERS.find((entry) => entry.id === state.bandFilter);
-    const floor = filter?.minBand
-      ? BAND_ORDER.indexOf(filter.minBand)
-      : BAND_ORDER.length - 1;
-    return zones.filter((zone) => {
-      const rank = BAND_ORDER.indexOf(zone.band);
-      if (rank === -1 || rank > floor) return false;
-      if (state.watchedOnly && !state.watched.has(zone.id)) return false;
-      return true;
+    const criteria = {
+      query: state.query,
+      minBand:
+        BAND_FILTERS.find((entry) => entry.id === state.bandFilter)?.minBand ??
+        null,
+      watchedOnly: state.watchedOnly,
+      watched: state.watched,
+    };
+    return sortZones(
+      filterZones(zones, criteria, { bandOrder: BAND_ORDER }),
+      state.sort,
+    );
+  }
+
+  /**
+   * Options carry live counts so a reader can see at a glance where today's
+   * fires sit. Without them a band nothing reaches looks like a broken filter
+   * rather than a quiet day.
+   */
+  function renderBandCounts() {
+    const zones = state.payload?.zones;
+    const last = BAND_ORDER.length - 1;
+    BAND_FILTERS.forEach((filter, index) => {
+      const option = bandSelect.options[index];
+      if (!option) return;
+      const label = t(filter.label);
+      if (!Array.isArray(zones)) {
+        option.textContent = label;
+        return;
+      }
+      const floor = filter.minBand ? BAND_ORDER.indexOf(filter.minBand) : last;
+      const count = zones.filter((zone) => {
+        const rank = BAND_ORDER.indexOf(zone.band);
+        return rank !== -1 && rank <= floor;
+      }).length;
+      option.textContent = `${label} — ${formatCount(count)}`;
     });
   }
 
@@ -275,11 +432,19 @@ function mountPanel({
       tn(scored, '{count} incident', '{count} incidents', {
         count: formatNumber(scored),
       }),
-      t('{count} at ELEVATED or above', { count: formatNumber(atRisk) }),
+    ];
+    // Only worth a line when it is not zero; the band menu carries the counts
+    // either way, and "0 at ELEVATED" at the top of every visit is noise.
+    if (atRisk > 0) {
+      parts.push(
+        t('{count} at ELEVATED or above', { count: formatNumber(atRisk) }),
+      );
+    }
+    parts.push(
       tn(acres, '{count} acre', '{count} acres', {
         count: formatNumber(acres),
       }),
-    ];
+    );
     const shown = visibleZones().length;
     if (shown !== (payload.zones?.length ?? 0)) {
       parts.push(t('{count} shown', { count: formatNumber(shown) }));
@@ -363,6 +528,7 @@ function mountPanel({
     if (state.destroyed) return;
     renderPosture();
     renderConditions();
+    renderBandCounts();
     const zones = visibleZones();
     list.replaceChildren(...zones.map(renderRow));
 
@@ -370,8 +536,19 @@ function mountPanel({
     let message = null;
     if (state.error) message = state.error;
     else if (state.payload && !zones.length) {
+      const narrowed = hasFilters({
+        query: state.query,
+        minBand:
+          BAND_FILTERS.find((entry) => entry.id === state.bandFilter)
+            ?.minBand ?? null,
+        watchedOnly: state.watchedOnly,
+      });
       message = state.payload.zones?.length
-        ? t('No incident meets this filter.')
+        ? narrowed
+          ? t(
+              'No incident meets this filter. Clear the search or widen the band.',
+            )
+          : t('No active incident in the current perimeter feed.')
         : t('No active incident in the current perimeter feed.');
     }
     empty.hidden = message === null;
@@ -380,6 +557,14 @@ function mountPanel({
     watchedButton.setAttribute('aria-pressed', String(state.watchedOnly));
     watchedButton.classList.toggle('is-active', state.watchedOnly);
     refreshButton.disabled = state.loading;
+    clearButton.hidden = !hasFilters({
+      query: state.query,
+      minBand:
+        BAND_FILTERS.find((entry) => entry.id === state.bandFilter)?.minBand ??
+        null,
+      watchedOnly: state.watchedOnly,
+    });
+    intro.hidden = state.introSeen;
   }
 
   /* ----------------------------------------------------------------- flyTo */
@@ -499,11 +684,42 @@ function mountPanel({
   };
   bandSelect.addEventListener('change', onBandChange);
 
+  const onSortChange = () => {
+    state.sort = sortSelect.value;
+    render();
+  };
+  sortSelect.addEventListener('change', onSortChange);
+
+  // No debounce: the longest list is ~90 rows and render() rebuilds only the
+  // rows, so every keystroke is cheaper than the timer it would take to wait.
+  const onSearch = () => {
+    state.query = searchInput.value;
+    render();
+  };
+  searchInput.addEventListener('input', onSearch);
+
+  const onClear = () => {
+    state.query = '';
+    state.bandFilter = 'all';
+    state.watchedOnly = false;
+    searchInput.value = '';
+    bandSelect.value = 'all';
+    render();
+  };
+  clearButton.addEventListener('click', onClear);
+
   const onWatchedToggle = () => {
     state.watchedOnly = !state.watchedOnly;
     render();
   };
   watchedButton.addEventListener('click', onWatchedToggle);
+
+  const onIntroDismiss = () => {
+    state.introSeen = true;
+    writeIntroSeen(storage);
+    intro.hidden = true;
+  };
+  introDismiss.addEventListener('click', onIntroDismiss);
 
   const onRefresh = () => {
     void refresh();
@@ -524,7 +740,9 @@ function mountPanel({
       }, intervalMs)
     : null;
 
-  setCollapsed(true);
+  // Open the list, not the drawer: this is the one panel a wildfire reader came
+  // for, and a collapsed list on arrival is a tool nobody finds.
+  setCollapsed(false);
   render();
   void refresh();
 
@@ -537,8 +755,12 @@ function mountPanel({
       if (timer !== null) view?.clearInterval?.(timer);
       documentRef.removeEventListener?.('visibilitychange', onVisibility);
       bandSelect.removeEventListener('change', onBandChange);
+      sortSelect.removeEventListener('change', onSortChange);
+      searchInput.removeEventListener('input', onSearch);
+      clearButton.removeEventListener('click', onClear);
       watchedButton.removeEventListener('click', onWatchedToggle);
       refreshButton.removeEventListener('click', onRefresh);
+      introDismiss.removeEventListener('click', onIntroDismiss);
       disclosure.destroy();
       panel.remove();
     },

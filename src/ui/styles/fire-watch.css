@@ -42,9 +42,114 @@
 }
 
 #fire-watch-panel .fire-watch-controls {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   align-items: center;
   gap: 6px;
+}
+
+/* Both menus share the width evenly, so the row is two tidy columns instead of
+   a full-width menu followed by a ragged wrap. */
+#fire-watch-panel .fire-watch-controls > .fire-watch-select {
+  min-width: 0;
+  width: 100%;
+}
+
+#fire-watch-panel .fire-watch-controls > .fire-watch-chip {
+  justify-content: center;
+}
+
+/* One search field, full width, so the reader does not have to work out which
+   filter covers the thing they are looking for. */
+#fire-watch-panel .fire-watch-search {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#fire-watch-panel .fire-watch-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 5px 8px;
+  border-radius: var(--btn-radius);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+#fire-watch-panel .fire-watch-search-input::placeholder {
+  color: var(--text-dim);
+  opacity: 1;
+}
+
+#fire-watch-panel .fire-watch-clear[hidden] {
+  display: none !important;
+}
+
+/* The first-visit card: readable prose, not a wall of monospace chrome. */
+#fire-watch-panel .fire-watch-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 9px;
+  border-radius: var(--btn-radius);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+#fire-watch-panel .fire-watch-intro[hidden] {
+  display: none !important;
+}
+
+#fire-watch-panel .fire-watch-intro-list {
+  margin: 0;
+  padding-left: 14px;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+#fire-watch-panel .fire-watch-intro-text {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+
+#fire-watch-panel .fire-watch-intro .fire-watch-chip {
+  align-self: flex-start;
+}
+
+/* "What the score means" — closed by default so it never competes with the list. */
+#fire-watch-panel .fire-watch-help {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 9px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+#fire-watch-panel .fire-watch-help-summary {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+#fire-watch-panel .fire-watch-help-list {
+  margin: 6px 0 0;
+  padding-left: 14px;
+}
+
+#fire-watch-panel .fire-watch-help-meta {
+  margin: 6px 0 0;
+  color: var(--text-dim);
 }
 
 #fire-watch-panel .fire-watch-select {
