@@ -1,0 +1,43 @@
+# Hosted God's Eye View.
+#
+#   DOMAIN, ACME_EMAIL and APP_UPSTREAM come from the environment
+#   (deploy/.env for compose; see RUNBOOK.md for a local run).
+#
+# Caddy obtains and renews the certificate for DOMAIN on its own, so the name
+# must resolve to this server and ports 80 and 443 must be reachable.
+{
+	email {$ACME_EMAIL}
+	# Do not volunteer the server version.
+	servers {
+		strict_sni_host on
+	}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# One password per person, in users.caddyfile. Adding or removing somebody
+	# is a line in that file plus a reload: no restart of the app, no data
+	# migration, and nothing for the person to install.
+	basic_auth {
+		# Relative to this file: the container mounts both into /etc/caddy,
+		# and a local run finds them side by side in deploy/.
+		import users.caddyfile
+	}
+
+	header {
+		# The console runs its own scripts from this origin only.
+		X-Content-Type-Options nosniff
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+		# Imagery and geolocation stay with this site; nothing else is granted.
+		Permissions-Policy "geolocation=(self), camera=(), microphone=(self)"
+		-Server
+	}
+
+	reverse_proxy {$APP_UPSTREAM} {
+		# Keep the public Host: the app checks it against GEV_ALLOWED_HOSTS.
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+	}
+}

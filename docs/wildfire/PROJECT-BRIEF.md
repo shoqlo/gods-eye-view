@@ -13,6 +13,8 @@ shape on the globe are the same object.
 
 This document is the scope. `DATA-AND-METHOD.md` is the arithmetic and the data
 provenance. `MONETISATION.md` is the commercial plan and what it requires.
+`USER-GUIDE.md` is what a person with a login reads. `../deploy/RUNBOOK.md` is
+how it is put on a server.
 
 ## What it is for
 
@@ -43,6 +45,7 @@ mistaken for any of them.
 | --- | --- | --- |
 | Scoring engine | `src/wildfire/risk.js` | The arithmetic, the bands, the reasons, the confidence |
 | Presentation helpers | `src/wildfire/display.js` | Formatting and translation of every number and label |
+| Search, filter, sort | `src/wildfire/filter.js` | The pure predicate and ordering behind the panel's controls |
 | API aggregator | `server/providers/fireRisk.js` | `/api/fire-risk`, caching, rate limits, payload shape |
 | Panel | `src/ui/fireWatch.js` | The rail panel, the filters, the watchlist, the fly-to |
 | Styling | `src/ui/styles/fire-watch.css` | Panel appearance, using the app's existing tokens |
@@ -68,12 +71,44 @@ feed that the engine has to survive.
 
 ## What is built
 
-- 46 unit tests across the engine, the display helpers and the API aggregator.
-- A panel that mounts as a second panel in the left rail, filters by band,
-  keeps a local watchlist, refreshes every five minutes and on tab focus, and
-  flies the camera to an incident using the application's own framing rules.
+- 63 unit tests across the engine, the display helpers, the filter module and
+  the API aggregator.
+- A panel that leads the left rail (the rail keeps its first expanded panel, so
+  a list mounted further down was folded away on arrival), filters by band with
+  live counts per option, sorts by risk, size or recency, searches one field for
+  name, state or ID, keeps a local watchlist, refreshes every five minutes and
+  on tab focus, and flies the camera to an incident using the application's own
+  framing rules.
+- A guided first run — one-sentence intro card, live counts on every band, a
+  single CLEAR that resets every filter, and a "what the score means" disclosure
+  — because the difference between a usable index and a wall of numbers is
+  explanation, not features.
 - Copy translated into Spanish, Russian and Simplified Chinese, with the
   catalogue kept in step by `npm run i18n`.
+- A hosted deployment: Docker Compose plus Caddy, TLS, one named login per
+  person, keys on the server, nothing but the edge published. See
+  `deploy/RUNBOOK.md`.
+
+## How it is delivered
+
+One shared instance on one server, reached at one domain. Caddy terminates TLS
+and holds a bcrypt hash per person, so visiting the site asks for a username and
+password before a single byte of the application is served. The app itself has
+no accounts: everybody who logs in sees the same live data and the same map.
+
+The consequences are worth stating, because they are design choices rather than
+gaps:
+
+- **Watchlists do not follow the person.** They live in the browser, so they are
+  private, and they are gone on another machine.
+- **Keys stay on the server.** Provider Settings is switched off on a hosted
+  instance, so no visitor can read or change a key.
+- **Removing somebody is one line and a Caddy reload.** No reindexing, no data
+  migration, no session store to expire.
+
+Per-person data — saved views, shared watchlists, an API key of one's own —
+is what a real account system would buy, and it is deliberately deferred until
+there is a reason to pay for it. See `MONETISATION.md`.
 
 ## Known limits, stated plainly
 
