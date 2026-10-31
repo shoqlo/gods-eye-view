@@ -13,8 +13,8 @@ shape on the globe are the same object.
 
 This document is the scope. `DATA-AND-METHOD.md` is the arithmetic and the data
 provenance. `MONETISATION.md` is the commercial plan and what it requires.
-`USER-GUIDE.md` is what a person with a login reads. `../deploy/RUNBOOK.md` is
-how it is put on a server.
+`USER-GUIDE.md` is what a person with a login reads. `../../deploy/RUNBOOK.md`
+is how it is put on a server.
 
 ## What it is for
 
@@ -87,7 +87,7 @@ feed that the engine has to survive.
   catalogue kept in step by `npm run i18n`.
 - A hosted deployment: Docker Compose plus Caddy, TLS, one named login per
   person, keys on the server, nothing but the edge published. See
-  `deploy/RUNBOOK.md`.
+  `../../deploy/RUNBOOK.md`.
 
 ## How it is delivered
 
