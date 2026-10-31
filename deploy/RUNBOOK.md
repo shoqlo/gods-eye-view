@@ -38,12 +38,15 @@ repository; this folder adds the public, authenticated edge around them.
 1. **A server.** 2 vCPU, 2 GB RAM, 20 GB disk is ample; the app is a Node process
    and the heavy imagery is drawn by the visitor's browser.
 2. **Docker Engine with the compose plugin.**
-3. **A DNS `A` record** (and `AAAA` if the server has IPv6) pointing the name at
+3. **Node 20 or newer.** Only to run `deploy/make-users.mjs`: it is the thing
+   that turns a password into the hash Caddy wants. It hands the hashing itself
+   to the `caddy` image, but it still needs Node to run.
+4. **A DNS `A` record** (and `AAAA` if the server has IPv6) pointing the name at
    the server, already propagated. Caddy asks Let's Encrypt for a certificate on
    first start and cannot prove ownership if the name does not resolve yet.
-4. **Ports 80 and 443 open** in the cloud firewall *and* the host firewall.
+5. **Ports 80 and 443 open** in the cloud firewall *and* the host firewall.
    Port 80 is not optional: it is where the certificate challenge lands.
-5. **The repository on the server**, cloned as the user that will run compose.
+6. **The repository on the server**, cloned as the user that will run compose.
 
 ## 3. First deploy
 
@@ -51,6 +54,10 @@ repository; this folder adds the public, authenticated edge around them.
 # 1. Docker (skip if already installed)
 curl -fsSL https://get.docker.com | sudo sh
 sudo usermod -aG docker "$USER"   # then log out and back in
+
+# 2. Node, for make-users.mjs only (skip if `node -v` already answers)
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt-get install -y nodejs
 
 # 2. The code
 git clone <your fork> gev
@@ -139,8 +146,7 @@ Four things are worth keeping. Everything else can be rebuilt from git.
 
 ```bash
 sudo tar czf gev-backup-$(date +%F).tar.gz \
-  deploy/.env deploy/users.caddyfile .env \
-  --exclude='node_modules'
+  deploy/.env deploy/users.caddyfile .env
 ```
 
 - `deploy/.env` — the domain and ACME address.
@@ -210,7 +216,7 @@ nobody can reach the box while it is still running.
 | Symptom | Cause and fix |
 | --- | --- |
 | **502 Bad Gateway** after login | Caddy cannot reach the app. `docker compose ... logs app` to see whether it started. If you are running Caddy outside Docker against a local dev server, note that the dev server binds `::1` only — use `APP_UPSTREAM=localhost:4173`, not `127.0.0.1:4173`. |
-| **No certificate**, Caddy log shows ACME errors | DNS not propagated, port 80 blocked, or a CAA record forbids Let's Encrypt. `dig +short fires.example.org` must return the server. Rate limits apply after repeated failures: check with `--staging` style testing or wait. |
+| **No certificate**, Caddy log shows ACME errors | DNS not propagated, port 80 blocked, or a CAA record forbids Let's Encrypt. `dig +short fires.example.org` must return the server. Let's Encrypt rate-limits repeated failures, so fix the cause before retrying; to rehearse without spending the limit, add `acme_ca https://acme-staging-v02.api.letsencrypt.org/directory` to the global block of the `Caddyfile`. |
 | **401 on a correct password** | The hash and the password disagree, or `users.caddyfile` was not reloaded. Regenerate with `make-users.mjs` and restart Caddy. Never hand-write a hash. |
 | **Caddy will not start**: `import` file missing | `deploy/users.caddyfile` does not exist. Docker would create a *directory* at that path, so create the file first: `node deploy/make-users.mjs alice` writes it properly. |
 | **403 Blocked request. This host is not allowed.** | The app's Host allowlist. `GEV_ALLOWED_HOSTS` is set from `DOMAIN` by compose; if `DOMAIN` is empty, the public name is not on the list. |
@@ -225,12 +231,11 @@ This is how the edge was validated on a machine without Docker. It proves the
 login and the proxy; it does not exercise the containers.
 
 ```bash
-# Terminal 1 - the app
+# Terminal 1 - the app, from the repository root
 npm run dev -- --port 4174 --strictPort
 
-# Terminal 2 - Caddy, plain HTTP on :8080, proxying to the dev server
-cd gev
-cp deploy/users.caddyfile.example deploy/users.caddyfile   # then add a real line
+# Terminal 2 - Caddy, plain HTTP on :8080, proxying to the dev server.
+# `caddy` here is the binary, not the container; make-users finds it on PATH.
 node deploy/make-users.mjs tester
 DOMAIN=:8080 ACME_EMAIL=ops@example.org APP_UPSTREAM=localhost:4174 \
   caddy run --config deploy/Caddyfile --adapter caddyfile
@@ -263,8 +268,9 @@ Stated plainly, because a runbook that overstates its evidence is worse than non
   mismatched passwords and invalid usernames.
 
 **Not proven here:** `compose.hosted.yaml` has never been built or run, because
-Docker is not installed on the machine this was written on. The image tag
-(`caddy:2.11-alpine`) matches the binary that was validated, and the app's own
-container path was already in use, but the first real `up -d --build` is the
-first real test. Expect to spend ten minutes on section 3 and section 10 the
-first time.
+Docker is not installed on the machine this was written on — and there is no WSL
+or Podman to borrow either. The file does parse as YAML, its service, volume and
+port structure is what this runbook describes, and the image tag
+(`caddy:2.11-alpine`) matches the binary that was validated, but the first real
+`up -d --build` is the first real test. Expect to spend ten minutes on section 3
+and section 10 the first time.
