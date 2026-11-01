@@ -286,8 +286,10 @@ DOMAIN=:8080 ACME_EMAIL=ops@example.org APP_UPSTREAM=localhost:4174 \
 
 # Terminal 3 - prove it
 curl -sI http://localhost:8080/                        # 401 + WWW-Authenticate
+curl -s  http://localhost:8080/wildfire | head -c 80   # the public page
+curl -s  http://localhost:8080/api/fire-risk | head -c 200  # the public JSON
+curl -sI http://localhost:8080/api/wind                # 401: the exemption is two paths
 curl -s  -u tester:<password> http://localhost:8080/   # the app's HTML
-curl -s  -u tester:<password> http://localhost:8080/api/fire-risk | head -c 200
 ```
 
 `DOMAIN=:8080` is the Caddy shorthand for "serve plain HTTP on this port", which
