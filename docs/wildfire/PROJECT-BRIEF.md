@@ -85,6 +85,10 @@ feed that the engine has to survive.
   explanation, not features.
 - Copy translated into Spanish, Russian and Simplified Chinese, with the
   catalogue kept in step by `npm run i18n`.
+- A public read-only view at `/wildfire`: the same ranking as a self-contained
+  page with search and a band filter, so the list can be shared without handing
+  out the console. `server/providers/wildfirePage.js`, exempted from the login by
+  a two-path matcher in `deploy/Caddyfile` and nothing more.
 - A hosted deployment: Docker Compose plus Caddy, TLS, one named login per
   person, keys on the server, nothing but the edge published. See
   `../../deploy/RUNBOOK.md`.
@@ -101,8 +105,13 @@ gaps:
 
 - **Watchlists do not follow the person.** They live in the browser, so they are
   private, and they are gone on another machine.
+- **One path is public.** `/wildfire` and `/api/fire-risk` answer without a
+  login, because a ranking nobody can link to is a ranking nobody argues with.
+  Every other path, including every other `/api` route, stays behind the login —
+  the public page is an exemption list of two, not a second site.
 - **Keys stay on the server.** Provider Settings is switched off on a hosted
-  instance, so no visitor can read or change a key.
+  instance, so no visitor can read or change a key. Spend is capped at the
+  provider (budget alerts and quotas), not in the app.
 - **Removing somebody is one line and a Caddy reload.** No reindexing, no data
   migration, no session store to expire.
 

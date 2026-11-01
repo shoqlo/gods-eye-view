@@ -133,6 +133,17 @@ The list lives in **this browser on this machine**. It is not attached to your
 login, so it will not follow you to another computer, and nobody else can see
 it. Clearing your browser data clears it.
 
+## 6b. Sharing the list without giving away the console
+
+There is a second, smaller view at `/wildfire` — the same ranking, the same
+search and band filter, no globe and no login. You can send that link to anyone;
+they will see the fires and nothing else. The full console at `/` still asks for
+a password, because it can spend the provider keys.
+
+The share page is deliberately plain: it lists, it filters, it opens a row's
+reasons, and it stops there. It has no watchlist, so a fire you keep is kept in
+your own console only.
+
 ## 7. What it cannot do
 
 - **It does not predict spread.** No fire growth, no rate of spread, no

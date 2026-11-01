@@ -1730,6 +1730,10 @@
     ],
     "modules": [
       "src/ui/placeNames.js",
+      "src/ui/fireWatch.js",
+      "src/wildfire/risk.js",
+      "src/wildfire/display.js",
+      "src/wildfire/filter.js",
       "src/cyberSonarScene.js",
       "src/cyberSonar.js",
       "src/hudLayouts.js",
