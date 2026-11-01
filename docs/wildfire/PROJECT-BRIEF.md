@@ -89,6 +89,11 @@ feed that the engine has to survive.
   page with search and a band filter, so the list can be shared without handing
   out the console. `server/providers/wildfirePage.js`, exempted from the login by
   a two-path matcher in `deploy/Caddyfile` and nothing more.
+- A per-fire location view on that page: nearest live ALERTCalifornia cameras,
+  the newest NASA satellite frame with the official perimeter drawn on it, a
+  false-colour layer, heat detections and a date stepper. Both imagery sources
+  are keyless and fetched by the reader's browser, so the server proxies none of
+  it and the public path list is unchanged.
 - A hosted deployment: Docker Compose plus Caddy, TLS, one named login per
   person, keys on the server, nothing but the edge published. See
   `../../deploy/RUNBOOK.md`.

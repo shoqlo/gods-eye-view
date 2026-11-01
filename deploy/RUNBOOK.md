@@ -184,6 +184,28 @@ fly-to, and its tests assert that it names no key, requests nothing but
 `/api/fire-risk`, and links only to `/`. A share page that grew a second job
 would be a second place to leak from.
 
+### Imagery in the location view
+
+Each fire on the public page has a **View location** button. It shows the
+official perimeter on a satellite frame from NASA GIBS, plus the nearest live
+cameras from ALERTCalifornia.
+
+- **Both are fetched by the reader's browser directly.** No key, no proxy, no new
+  route: the public path list above is unchanged, and this server never carries
+  the imagery traffic.
+- **Their availability is theirs, not ours.** If NASA or ALERTCalifornia is down,
+  the list still works and the view says the imagery is unavailable.
+- **Readers' IP addresses reach NASA and ALERTCalifornia.** That is ordinary for
+  embedded public imagery, but it is a disclosure worth knowing.
+- **ALERTCalifornia covers California only.** A fire in another state shows the
+  satellite frame and a truthful "no camera within 60 km" line.
+- **Check ALERTCalifornia's terms before a public launch.** The page attributes
+  the frames to UC San Diego and links back, but embedding another
+  organisation's camera frames is the operator's call, not a technical detail.
+- **Satellite is not live video.** HLS (Sentinel-2/Landsat) is about 30 m and
+  arrives a day or more late; VIIRS is daily at 375 m. The page skips days with
+  no usable frame, and says when it did.
+
 ## 6. Backups
 
 Four things are worth keeping. Everything else can be rebuilt from git.

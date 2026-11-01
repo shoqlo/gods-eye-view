@@ -31,6 +31,7 @@ import { fileURLToPath } from 'node:url';
 import {
   RISK_BANDS,
   RISK_VERSION,
+  parseVertex,
   rankZones,
   windTowardDeg,
 } from '../../src/wildfire/risk.js';
@@ -78,6 +79,49 @@ const LIMITATIONS = Object.freeze([
 ]);
 
 const clampInt = (value, min, max) => Math.min(max, Math.max(min, value));
+
+/** Points a perimeter outline may carry. Enough for shape, small enough for a list. */
+const OUTLINE_MAX_POINTS = 96;
+
+const round5 = (value) => Math.round(value * 1e5) / 1e5;
+
+/**
+ * The largest ring of a WFIGS `polygons` field, simplified for drawing.
+ *
+ * The index itself only needs a centroid, a bounding box and an area, so the
+ * ring is not part of the scored zone. A location view does need the shape,
+ * though - without it the satellite frame has no official perimeter on it - and
+ * the ring can carry hundreds of vertices. This returns the largest part's outer
+ * ring, uniformly downsampled and rounded to five decimals (about a metre), or
+ * null for a point-only incident. Callers ask for it explicitly so the list
+ * response stays small.
+ */
+export function perimeterOutline(polygons, maxPoints = OUTLINE_MAX_POINTS) {
+  if (!Array.isArray(polygons)) return null;
+  let largest = [];
+  for (const part of polygons) {
+    const ring = Array.isArray(part) ? part[0] : null;
+    if (!Array.isArray(ring)) continue;
+    const points = [];
+    for (const raw of ring) {
+      const point = parseVertex(raw);
+      if (point) points.push([point.lon, point.lat]);
+    }
+    if (points.length > largest.length) largest = points;
+  }
+  if (largest.length < 3) return null;
+  const step = Math.max(1, Math.ceil(largest.length / maxPoints));
+  const kept = [];
+  for (let index = 0; index < largest.length; index += step) {
+    kept.push(largest[index]);
+  }
+  // A step that skips the tail can cut a corner off the shape; keep the last
+  // vertex when the loop did not land on it.
+  const last = largest[largest.length - 1];
+  const tail = kept[kept.length - 1];
+  if (tail[0] !== last[0] || tail[1] !== last[1]) kept.push(last);
+  return kept.map(([lon, lat]) => [round5(lon), round5(lat)]);
+}
 
 /** Position of a GeoJSON Point, Polygon or MultiPolygon, in degrees. */
 export function geometryPoint(geometry) {
@@ -331,7 +375,10 @@ export function fireRiskProxy({
     const includeContained = ['1', 'true', 'yes'].includes(
       (url.searchParams.get('includeContained') ?? '').toLowerCase(),
     );
-    return { limit, minBand, includeContained };
+    const outline = ['1', 'true', 'yes'].includes(
+      (url.searchParams.get('outline') ?? '').toLowerCase(),
+    );
+    return { limit, minBand, includeContained, outline };
   }
 
   async function build(req, options) {
@@ -355,6 +402,19 @@ export function fireRiskProxy({
       minBand: options.minBand,
       includeContained: options.includeContained,
     });
+
+    // The ring is drawn, not scored: attach it only when the caller asks, so
+    // the ranked list stays the same size it has always been.
+    let zones = ranked.zones;
+    if (options.outline) {
+      const byId = new Map(
+        perimeters.rows.map((row) => [row?.stableId ?? null, row]),
+      );
+      zones = ranked.zones.map((zone) => {
+        const outline = perimeterOutline(byId.get(zone.id)?.polygons);
+        return outline ? { ...zone, outline } : zone;
+      });
+    }
 
     return {
       generatedAt: now(),
@@ -398,7 +458,7 @@ export function fireRiskProxy({
           packs: assetsResult.packs,
         },
       },
-      zones: ranked.zones,
+      zones,
       provenance: [
         {
           source: 'NIFC WFIGS current interagency perimeters',

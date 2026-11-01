@@ -144,6 +144,29 @@ The share page is deliberately plain: it lists, it filters, it opens a row's
 reasons, and it stops there. It has no watchlist, so a fire you keep is kept in
 your own console only.
 
+## 6c. Looking at the ground
+
+Open a fire and press **View location**. You get the same fire as a place, not a
+row:
+
+- **Live cameras**, when one is near. These are ALERTCalifornia's public
+  cameras, updated about every 15 seconds. They are genuinely live, but the
+  network covers California only, and a camera points wherever its operator last
+  left it, so it may be looking at a ridge rather than the fire.
+- **Satellite**, the newest frame NASA has for that spot. Use the arrows to step
+  back a day, and the layer menu for 30 m detail, a daily 375 m frame, or false
+  colour, which makes burn scars stand out. The yellow outline is the official
+  perimeter.
+- **Heat detections** overlays satellite heat signatures for the same day.
+
+Two things to hold on to. A satellite is not a live video feed: it sees a given
+point once or twice a day, the image is usually a day or more old, and cloud can
+hide the ground completely. And the page skips days with no usable frame, saying
+so in the caption rather than showing you black.
+
+For high-resolution inspection, use **Google Maps satellite** in the same view.
+Its imagery is far sharper but often months old, which is the opposite trade.
+
 ## 7. What it cannot do
 
 - **It does not predict spread.** No fire growth, no rate of spread, no

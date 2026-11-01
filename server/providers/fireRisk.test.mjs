@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { fireRiskProxy, geometryPoint } from './fireRisk.js';
+import { fireRiskProxy, geometryPoint, perimeterOutline } from './fireRisk.js';
 
 const NOW = Date.UTC(2026, 9, 27, 12, 0, 0);
 
@@ -392,4 +392,49 @@ test('the bundled asset packs load from disk without any network', async () => {
       ['dam', 'ok'],
     ],
   );
+});
+
+test('the perimeter ring is attached only when the caller asks for it', async () => {
+  const siblings = fakeSiblings();
+  const lean = await call(mount(plugin(siblings)));
+  assert.equal(lean.json.zones[0].outline, undefined);
+
+  const withRing = await call(mount(plugin(siblings)), {
+    url: '/api/fire-risk?outline=1',
+  });
+  const zone = withRing.json.zones[0];
+  assert.ok(Array.isArray(zone.outline));
+  assert.ok(zone.outline.length >= 4);
+  for (const [lon, lat] of zone.outline) {
+    assert.ok(lon >= -120.001 && lon <= -118.999, `lon ${lon}`);
+    assert.ok(lat >= 39.999 && lat <= 41.001, `lat ${lat}`);
+  }
+  // Drawing the shape must not change what the zone scored.
+  assert.equal(zone.score, lean.json.zones[0].score);
+});
+
+test('a point-only incident has no outline and the response still succeeds', async () => {
+  const siblings = fakeSiblings({ rows: [perimeterRow({ polygons: null })] });
+  const reply = await call(mount(plugin(siblings)), {
+    url: '/api/fire-risk?outline=1',
+  });
+  assert.equal(reply.status, 200);
+  assert.equal(reply.json.zones[0].outline, undefined);
+});
+
+test('a long ring is downsampled to a bounded outline, tail included', () => {
+  const ring = [];
+  for (let index = 0; index < 720; index += 1) {
+    const angle = (index / 720) * Math.PI * 2;
+    ring.push(
+      `${(-120 + Math.cos(angle) * 0.5).toFixed(5)} ${(40 + Math.sin(angle) * 0.5).toFixed(5)}`,
+    );
+  }
+  const outline = perimeterOutline([[ring]]);
+  assert.ok(outline.length <= 97, `points ${outline.length}`);
+  assert.ok(outline.length >= 80);
+  const last = outline[outline.length - 1];
+  assert.equal(last[0], Number(ring[719].split(' ')[0]));
+  assert.equal(last[1], Number(ring[719].split(' ')[1]));
+  assert.equal(perimeterOutline([[ring.slice(0, 2)]]), null);
 });

@@ -141,15 +141,47 @@ test('the page states what it is not, in the same words as the panel', () => {
 });
 
 test('the page makes no request outside the public allowlist', () => {
-  // One internal link (to the app) and one inline icon. Nothing else: a shared
-  // page that fetched a stylesheet, a font or a favicon would either 401 or
-  // quietly depend on the deployment allowing one more path.
+  // One internal link (to the app) and one inline icon. The location view's
+  // external requests are built in script, so only the static document is
+  // checked here; the next test checks the hosts it may reach.
   const hrefs = [...WILDFIRE_PAGE_HTML.matchAll(/(?:href|src)="([^"]*)"/g)].map(
     (match) => match[1],
   );
   const internal = hrefs.filter((href) => href.startsWith('/'));
   assert.deepEqual(internal, ['/']);
   assert.ok(hrefs.some((href) => href.startsWith('data:image/svg+xml')));
+});
+
+test('the location view reaches only the imagery hosts it declares', () => {
+  const urls = [...WILDFIRE_PAGE_HTML.matchAll(/https?:\/\/[^\s"'`]+/g)].map(
+    (match) => match[0],
+  );
+  const hosts = [...new Set(urls.map((url) => new URL(url).host))].sort();
+  assert.deepEqual(hosts, [
+    'cameras.alertcalifornia.org',
+    'gibs.earthdata.nasa.gov',
+    'www.google.com',
+    'www.w3.org',
+  ]);
+});
+
+test('the location view asks NASA for the layers it promises', () => {
+  for (const layer of [
+    'HLS_S30_Nadir_BRDF_Adjusted_Reflectance',
+    'VIIRS_SNPP_CorrectedReflectance_TrueColor',
+    'VIIRS_SNPP_CorrectedReflectance_BandsM11-I2-I1',
+    'VIIRS_SNPP_Thermal_Anomalies_375m_All',
+  ]) {
+    assert.ok(WILDFIRE_PAGE_HTML.includes(layer), `page must request ${layer}`);
+  }
+});
+
+test('the location view is honest about what it is and who supplies it', () => {
+  assert.match(WILDFIRE_PAGE_HTML, /not live video/);
+  assert.match(WILDFIRE_PAGE_HTML, /NASA GIBS/);
+  assert.match(WILDFIRE_PAGE_HTML, /ALERTCalifornia/);
+  assert.match(WILDFIRE_PAGE_HTML, /covers California only/);
+  assert.match(WILDFIRE_PAGE_HTML, /may not be looking at the fire/);
 });
 
 test('the page builds rows with textContent, never innerHTML', () => {
