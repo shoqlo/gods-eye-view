@@ -26,21 +26,11 @@
 		-Server
 	}
 
-	# Public, no login: the read-only fire list and the index it reads.
-	#
-	# Exactly these two paths, and nothing else. The app behind them brokers
-	# provider keys from every other /api route, so a wider exemption would hand
-	# the key broker to the internet. `/api/fire-risk` is read-only, takes no
-	# user-supplied URL and carries its own rate limit.
-	@publicFireList path /wildfire /wildfire/ /api/fire-risk
-	handle @publicFireList {
-		reverse_proxy {$APP_UPSTREAM} {
-			header_up Host {host}
-			header_up X-Real-IP {remote_host}
-		}
-	}
+	# Every path, including the Wildfire Watch finder at /wildfire, needs a
+	# login. To publish the finder without one, paste the block from
+	# public-page.caddyfile.example here and reload Caddy (RUNBOOK.md, 5b).
 
-	# Everything else: one password per person, in users.caddyfile. Adding or
+	# One password per person, in users.caddyfile. Adding or
 	# removing somebody is a line in that file plus a reload: no restart of the
 	# app, no data migration, and nothing for the person to install.
 	handle {

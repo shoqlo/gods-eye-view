@@ -31,6 +31,8 @@ import { fileURLToPath } from 'node:url';
 import {
   RISK_BANDS,
   RISK_VERSION,
+  bandCounts,
+  confidenceCounts,
   parseVertex,
   rankZones,
   windTowardDeg,
@@ -394,27 +396,27 @@ export function fireRiskProxy({
         : assetLoader().catch(() => ({ assets: null, packs: [] })),
     ]);
 
+    // Rank every zone once. Each request's band floor, limit and outline
+    // choice is sliced from this one result (see `shape`), so the cache holds
+    // one entry per `includeContained` value instead of one per query string.
     const ranked = rankZones(perimeters.rows, {
       now: now(),
       assets: assetsResult.assets,
       windAt: windAt(wind.field, wind.manifest),
-      limit: options.limit,
-      minBand: options.minBand,
+      limit: Infinity,
       includeContained: options.includeContained,
     });
 
-    // The ring is drawn, not scored: attach it only when the caller asks, so
-    // the ranked list stays the same size it has always been.
-    let zones = ranked.zones;
-    if (options.outline) {
-      const byId = new Map(
-        perimeters.rows.map((row) => [row?.stableId ?? null, row]),
-      );
-      zones = ranked.zones.map((zone) => {
-        const outline = perimeterOutline(byId.get(zone.id)?.polygons);
-        return outline ? { ...zone, outline } : zone;
-      });
-    }
+    // The ring is drawn, not scored. It is kept on the cached result and
+    // removed from a response that did not ask for it, so the ranked list stays
+    // the same size it has always been.
+    const byId = new Map(
+      perimeters.rows.map((row) => [row?.stableId ?? null, row]),
+    );
+    const zones = ranked.zones.map((zone) => {
+      const outline = perimeterOutline(byId.get(zone.id)?.polygons);
+      return outline ? { ...zone, outline } : zone;
+    });
 
     return {
       generatedAt: now(),
@@ -480,6 +482,39 @@ export function fireRiskProxy({
     };
   }
 
+  /** The cache key: the only option that changes what is ranked. */
+  function buildKey(options) {
+    return JSON.stringify({ includeContained: options.includeContained });
+  }
+
+  /**
+   * One request's view of a full ranking: the band floor, the limit and the
+   * outline choice, with counts describing the zones that pass the floor
+   * before the limit trims them, exactly as `rankZones` reports them.
+   */
+  function shape(full, { limit, minBand, outline }) {
+    const floor = RISK_BANDS.find((band) => band.id === minBand) ?? null;
+    const kept = floor
+      ? full.zones.filter((zone) => zone.score >= floor.min)
+      : full.zones;
+    const zones = kept.slice(0, limit).map((zone) => {
+      if (outline || zone.outline === undefined) return zone;
+      const { outline: _drawn, ...rest } = zone;
+      return rest;
+    });
+    return {
+      ...full,
+      counts: {
+        ...bandCounts(kept),
+        confidence: confidenceCounts(kept),
+        scored: kept.length,
+        returned: zones.length,
+        truncated: kept.length > limit,
+      },
+      zones,
+    };
+  }
+
   async function acquire(key, options, req, store) {
     const previous = store.get(key);
     if (previous && now() - previous.savedAt < ttlMs) {
@@ -530,13 +565,22 @@ export function fireRiskProxy({
     const path = (req.url || '/').split('?')[0];
     if (path !== '/' && path !== '')
       return json(404, { error: 'unknown_route' });
-    if (!allow(clientKey(req))) return json(429, { error: 'rate_limited' });
-
     const options = parseOptions(req);
-    const key = JSON.stringify(options);
+    const key = buildKey(options);
+    // A fresh cached index, or one already being built, is the same answer for
+    // everybody and costs nothing extra to serve, so only a request that would
+    // start new work is counted. Behind a reverse proxy every visitor arrives
+    // from the proxy's address and shares one limiter bucket; counting cache
+    // hits would let one busy page lock every logged-in user out.
+    const cached = cache.get(key);
+    const free =
+      (cached && now() - cached.savedAt < ttlMs) || inFlight.has(key);
+    if (!free && !allow(clientKey(req)))
+      return json(429, { error: 'rate_limited' });
     try {
       const { value, stale } = await acquire(key, options, req, cache);
-      json(200, stale ? { ...value, stale: true } : value, stale);
+      const view = shape(value, options);
+      json(200, stale ? { ...view, stale: true } : view, stale);
     } catch {
       json(502, { error: 'fire_risk_unavailable', riskVersion: RISK_VERSION });
     }

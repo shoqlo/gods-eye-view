@@ -600,9 +600,14 @@ export function scoreZone(zone, context = {}) {
  */
 export function rankZones(rows, options = {}) {
   const now = finite(options.now) ? options.now : Date.now();
-  const limit = finite(options.limit)
-    ? clamp(Math.round(options.limit), 1, 500)
-    : 25;
+  // `Infinity` returns every scored zone: the API ranks once and slices each
+  // request's view from that one result.
+  const limit =
+    options.limit === Infinity
+      ? Infinity
+      : finite(options.limit)
+        ? clamp(Math.round(options.limit), 1, 500)
+        : 25;
   const minBand =
     RISK_BANDS.find((band) => band.id === options.minBand) ?? null;
   const includeContained = options.includeContained === true;

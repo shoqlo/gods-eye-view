@@ -1,0 +1,24 @@
+# Optional: publish the Wildfire Watch finder without a login.
+#
+# Off by default. To turn it on, paste the block below into deploy/Caddyfile,
+# inside the site block and above the `handle` that asks for the login, then
+# `docker compose -f deploy/compose.hosted.yaml restart caddy`.
+#
+# Before you do, read RUNBOOK.md section 5b. In short:
+#   - The finder works without a login, but place search and fire weather need
+#     one, so anonymous readers get the list, the filters and the location view.
+#   - Every anonymous reader arrives from Caddy's address, so they share the
+#     same rate-limit bucket as logged-in users; cached answers are not counted.
+#   - The location view embeds ALERTCalifornia camera frames; check their terms
+#     before showing them to the public.
+#
+# Exactly these paths and nothing else: every other /api route can spend a
+# provider key.
+
+	@publicFireList path /wildfire /wildfire/ /wildfire/app.js /wildfire/finder.js /api/fire-risk
+	handle @publicFireList {
+		reverse_proxy {$APP_UPSTREAM} {
+			header_up Host {host}
+			header_up X-Real-IP {remote_host}
+		}
+	}

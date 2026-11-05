@@ -372,6 +372,51 @@ test('method, path and rate limiting are refused cleanly', async () => {
   assert.equal(wrongPath.status, 404);
 });
 
+test('one ranking serves every view, and cached views are never rate limited', async () => {
+  // Behind Caddy every visitor shares the proxy's address, so this one client
+  // stands for every logged-in user at once.
+  const siblings = fakeSiblings({
+    rows: [
+      perimeterRow(),
+      perimeterRow({ stableId: 'b', name: 'Second', acres: 50, containedPct: 90 }),
+    ],
+  });
+  const handler = mount(plugin(siblings));
+  const first = await call(handler, { url: '/api/fire-risk?limit=100&outline=1' });
+  assert.equal(first.status, 200);
+  const fetchesAfterBuild = siblings.calls.length;
+  for (let i = 0; i < 200; i++) {
+    const limit = 1 + (i % 50);
+    const reply = await call(handler, {
+      url: `/api/fire-risk?limit=${limit}&outline=${i % 2}`,
+    });
+    assert.equal(reply.status, 200, `request ${i}`);
+    assert.ok(reply.json.zones.length <= limit);
+    assert.equal(reply.json.zones.some((zone) => 'outline' in zone), i % 2 === 1);
+  }
+  // Every variation was cut from the first build: no further upstream reads.
+  assert.equal(siblings.calls.length, fetchesAfterBuild);
+
+  // A band floor filters and recounts the same ranking.
+  const all = first.json;
+  const floor = await call(handler, { url: '/api/fire-risk?minBand=critical' });
+  assert.equal(floor.status, 200);
+  assert.ok(floor.json.counts.scored <= all.counts.scored);
+  assert.ok(floor.json.zones.every((zone) => zone.band === 'critical'));
+  const one = await call(handler, { url: '/api/fire-risk?limit=1' });
+  assert.equal(one.json.counts.returned, 1);
+  assert.equal(one.json.counts.truncated, all.counts.scored > 1);
+});
+
+test('requests that start new work are still rate limited', async () => {
+  // A zero TTL makes every request a fresh build, the case the limiter guards.
+  const handler = mount(plugin(fakeSiblings(), { ttlMs: 0 }));
+  const statuses = [];
+  for (let i = 0; i < 70; i++) statuses.push((await call(handler)).status);
+  assert.equal(statuses.filter((status) => status === 200).length, 60);
+  assert.equal(statuses.at(-1), 429);
+});
+
 test('the bundled asset packs load from disk without any network', async () => {
   const siblings = fakeSiblings();
   const handler = mount(

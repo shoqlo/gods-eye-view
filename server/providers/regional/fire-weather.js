@@ -80,13 +80,6 @@ export function fireWeatherProxy({ fetchJson } = {}) {
   async function handle(req, res) {
     if (req.method !== 'GET')
       return sendJson(res, 405, { error: 'Method Not Allowed' });
-    if (!_rateLimiter(clientKey(req)))
-      return sendJson(
-        res,
-        429,
-        { error: 'Rate limit exceeded' },
-        { 'Retry-After': '10' },
-      );
     const url = new URL(req.url || '', 'http://localhost');
     const point = validRegionalPoint(url.searchParams);
     if (!point)
@@ -96,12 +89,21 @@ export function fireWeatherProxy({ fetchJson } = {}) {
     const key = `${point.latitude.toFixed(1)},${point.longitude.toFixed(1)}`;
     const now = Date.now();
     const cached = _cache.get(key);
+    // A cached cell costs nothing upstream, so it is served before the limiter:
+    // behind a reverse proxy every user shares one limiter bucket.
     if (cached && now - cached.cachedAt <= FIRE_WEATHER_CACHE_MS)
       return sendJson(
         res,
         200,
         { ...cached.payload, status: 'cached' },
         { 'Cache-Control': 'public, max-age=120', 'X-Fire-Weather': 'HIT' },
+      );
+    if (!_inFlight.has(key) && !_rateLimiter(clientKey(req)))
+      return sendJson(
+        res,
+        429,
+        { error: 'Rate limit exceeded' },
+        { 'Retry-After': '10' },
       );
     const request = coalesceProxyRequest(_inFlight, key, () =>
       refresh(point, key),

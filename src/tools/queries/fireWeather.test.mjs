@@ -166,6 +166,15 @@ test('the proxy validates input, caches per 0.1° cell and fails cleanly with no
   assert.equal(second.headers['x-fire-weather'], 'HIT');
   assert.equal(calls, 1);
 
+  // Cache hits are served before the limiter, so one shared proxy address
+  // (every user behind Caddy) is not refused for an answer already in hand.
+  for (let i = 0; i < 100; i++)
+    assert.equal(
+      (await request(proxy, '/?latitude=34.21&longitude=-118.22')).status,
+      200,
+    );
+  assert.equal(calls, 1);
+
   fail = true;
   const missing = await request(proxy, '/?latitude=10&longitude=10');
   assert.equal(missing.status, 503);
