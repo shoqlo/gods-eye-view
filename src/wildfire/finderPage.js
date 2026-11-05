@@ -188,8 +188,8 @@ function number(value, digits = 0) {
 
 /** "1 fire", "12 fires". */
 function fireCount(count) {
-  const noun = count === 1 ? 'fire' : 'fires';
-  return `${count.toLocaleString('en-US')} ${noun}`;
+  const word = count === 1 ? 'fire' : 'fires';
+  return `${count.toLocaleString('en-US')} ${word}`;
 }
 
 function ago(ms) {
