@@ -298,6 +298,16 @@ function mountPanel({
     ),
   );
 
+  // The finder page is the simpler front door to the same list: search by
+  // place, fire weather, share links and CSV. Both keep one watchlist
+  // (WATCH_STORAGE_KEY), so a fire starred in either shows in both.
+  const finderLink = el(
+    'a',
+    'fire-watch-finder-link',
+    t('Open the finder: search a place, share, export'),
+  );
+  finderLink.href = '/wildfire';
+
   // Reading order: what is in the list, how to narrow it, the list itself, then
   // the provenance and the caveat. The sources line used to sit above the
   // search, where it pushed the first fire off a short rail.
@@ -311,6 +321,7 @@ function mountPanel({
     help,
     conditions,
     note,
+    finderLink,
   );
   inner.append(header, body);
   panel.append(glow, inner);

@@ -343,3 +343,11 @@
     max-height: none;
   }
 }
+
+/* The way to the simpler finder page, under the caveat. */
+#fire-watch-panel .fire-watch-finder-link {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--accent, #5fb0ff);
+}
