@@ -10,6 +10,7 @@ import { militaryInstallationsProxy } from './military-installations.js';
 import { regionalBriefProxy } from './regional/briefing.js';
 import { geocodeProxy, NOMINATIM_CACHE_DIR } from './regional/place.js';
 import { weatherEffectsProxy } from './regional/weather-effects.js';
+import { fireWeatherProxy } from './regional/fire-weather.js';
 import { cctvProxy } from './cctv.js';
 import { defaultSourceRoot } from './common/source-root.js';
 import { radioBrowserProxy } from './radio.js';
@@ -78,6 +79,7 @@ function localProviderPlugins({
     cycloneProxy(),
     mapillaryProxy(),
     firePerimetersProxy(),
+    fireWeatherProxy(),
     gnssIntegrityProxy(),
     ghostMapsProxy(),
     droneAirspaceProxy(),

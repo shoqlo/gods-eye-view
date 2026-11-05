@@ -23,6 +23,7 @@ export function createApplicationRequestServices({
     terrain: '/api/terrain/heights',
     regional: '/api/regional-brief',
     weather: '/api/weather-effects',
+    fireWeather: '/api/fire-weather',
     summary: '/api/openai/hud-summary',
     ...endpoints,
   };
@@ -185,6 +186,17 @@ export function createApplicationRequestServices({
         return requireOk(
           await request(pointUrl(urls.weather, latitude, longitude), options),
           'Weather',
+        );
+      },
+    },
+    fireWeather: {
+      async getRisk(latitude, longitude, options) {
+        return requireOk(
+          await request(
+            pointUrl(urls.fireWeather, latitude, longitude),
+            options,
+          ),
+          'Fire weather',
         );
       },
     },

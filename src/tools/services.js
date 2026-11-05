@@ -69,6 +69,7 @@ export function createToolServices({ fetchImpl, appUrl, panelKey }) {
     transit: createTransitSource({ fetchImpl }),
     traffic: createTrafficSource({ fetchImpl, tileFetchImpl: fetchImpl }),
     weather: requests.weather,
+    fireWeather: requests.fireWeather,
     weatherMaps: createWeatherSource({ fetchImpl }),
     wind: createWindSource({ fetchImpl }),
     imagery: createImageryService({ fetchImpl }),

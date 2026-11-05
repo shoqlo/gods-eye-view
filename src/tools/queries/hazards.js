@@ -1,8 +1,15 @@
-/** Natural hazard queries: earthquakes and active fires. */
+/** Natural hazard queries: earthquakes, active fires and fire weather. */
 
 import { suggestView } from '../views.js';
 import { defineTool, ToolError } from '../catalog.js';
-import { AREA_SCHEMA, areaContains, resolveArea } from '../area.js';
+import {
+  AREA_SCHEMA,
+  POINT_SCHEMA,
+  areaContains,
+  distanceKm,
+  resolveArea,
+  resolvePoint,
+} from '../area.js';
 import { LIMIT_SCHEMA, capRows, countNoun, isoTime } from '../results.js';
 import {
   FIRMS_CONFIDENCE_MODES,
@@ -192,6 +199,112 @@ export const getActiveFires = defineTool({
           satellite: fire.satellite ?? null,
           day_night: fire.daynight ?? null,
         })),
+      },
+    };
+  },
+});
+
+const DANGER_LABEL = {
+  low: 'low',
+  moderate: 'moderate',
+  high: 'high',
+  very_high: 'very high',
+  extreme: 'extreme',
+};
+
+export const getFireWeatherRisk = defineTool({
+  name: 'get_fire_weather_risk',
+  title: 'Fire weather risk',
+  description:
+    'Wildfire weather danger at a location for the next 24 hours from the ' +
+    'Open-Meteo forecast: Fosberg Fire Weather Index, Hot-Dry-Windy Index, ' +
+    'a red-flag-style humidity and wind screen and rain in the last 72 hours, ' +
+    'combined into low / moderate / high / very high / extreme. When NASA ' +
+    'FIRMS is configured, also counts satellite fire detections within the ' +
+    'radius. A screening estimate that ignores fuels and terrain, not an ' +
+    'official fire-danger rating or warning.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      location: POINT_SCHEMA,
+      radius_km: {
+        type: 'number',
+        minimum: 1,
+        maximum: 250,
+        description: 'Radius for counting nearby fire detections (default 50).',
+      },
+    },
+    required: ['location'],
+    additionalProperties: false,
+  },
+  requires: ['fireWeather'],
+  async run(args, { services, signal }) {
+    const point = await resolvePoint(args.location, { services, signal });
+    const radiusKm = args.radius_km ?? 50;
+    const payload = await services.fireWeather.getRisk(point.lat, point.lon, {
+      signal,
+    });
+    const assessment = payload?.assessment;
+    if (!assessment)
+      throw new ToolError('unavailable', 'Fire weather is unavailable here');
+    const stale = payload.status === 'stale';
+
+    // Nearby detections are context, not a requirement: a missing FIRMS key
+    // or a failed fetch leaves them unknown rather than failing the answer.
+    let nearby = null;
+    if (services.fires) {
+      try {
+        const snapshot = await services.fires.getSnapshot({ signal });
+        if (!snapshot.keyRequired) {
+          const hits = snapshot.fires
+            .map((fire) => ({ fire, km: distanceKm(point, fire) }))
+            .filter((hit) => hit.km <= radiusKm)
+            .sort((a, b) => (b.fire.frp ?? 0) - (a.fire.frp ?? 0));
+          nearby = {
+            radius_km: radiusKm,
+            count: hits.length,
+            strongest: hits[0]
+              ? {
+                  lat: hits[0].fire.lat,
+                  lon: hits[0].fire.lon,
+                  frp_mw: hits[0].fire.frp ?? null,
+                  distance_km: Number(hits[0].km.toFixed(1)),
+                }
+              : null,
+          };
+        }
+      } catch (error) {
+        if (signal?.aborted) throw error;
+      }
+    }
+
+    const peak = assessment.peak_24h;
+    const drivers = assessment.drivers?.length
+      ? ` (${assessment.drivers.join(', ')})`
+      : '';
+    const fires = nearby
+      ? `; ${countNoun(nearby.count, 'fire detection')} within ${radiusKm} km in the last 24 hours`
+      : '';
+    return {
+      summary:
+        `Fire weather at ${point.label}: ${DANGER_LABEL[assessment.danger]} ` +
+        `danger over the next 24 hours, peaking ${peak.time.slice(11, 16)} UTC ` +
+        `at FFWI ${peak.ffwi ?? '?'}${drivers}${fires}` +
+        (stale ? ' (data may be stale).' : '.'),
+      data: {
+        view: suggestView(services, {
+          point,
+          altitudeM: Math.max(60_000, radiusKm * 4_000),
+          layers: ['local-firms', 'fire-perimeters', 'wind'],
+        }),
+        location: point,
+        ...assessment,
+        nearby_fire_detections: nearby,
+        stale,
+        retrieved_at: payload.retrievedAt ?? null,
+        method:
+          'Screening index from model weather; ignores fuels, terrain and ' +
+          'local climatology. Official warnings take precedence.',
       },
     };
   },
