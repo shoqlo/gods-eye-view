@@ -111,12 +111,12 @@ what users ask for.
 
 ## 7. Phases
 
-| Phase | What | Who |
-| --- | --- | --- |
-| **0. Foundation** | Combine the wildfire branch with current upstream and the fire-weather tool; translations; Vite upgrade; built serving; cache-first limits; login-only by default | Claude |
-| **1. Finder** | The five goals, refine, place search with fire weather, shared watchlist, copy link, CSV, on-page help | Claude |
-| **2. Go live, privately** | Server and domain; first deploy against real data; 3–5 invited users; fix what they hit | Operator, with Claude |
-| **3. After feedback** | Choose from: overview map, watchlists that follow the login, email alerts for watched places, fire weather inside the index (computed from public-domain GFS), population exposure, Europe via EFFIS | Decided by Phase 2 |
+| Phase | What | Who | Status |
+| --- | --- | --- | --- |
+| **0. Foundation** | Combine the wildfire branch with current upstream and the fire-weather tool; translations; Vite upgrade; built serving; cache-first limits; login-only by default | Claude | Done |
+| **1. Finder** | The five goals, refine, place search with fire weather, shared watchlist, copy link, CSV, on-page help | Claude | Done |
+| **2. Go live, privately** | Server and domain; first deploy against real data; 3–5 invited users; fix what they hit | Operator, with Claude | Next |
+| **3. After feedback** | Choose from: overview map, watchlists that follow the login, email alerts for watched places, fire weather inside the index (computed from public-domain GFS), population exposure, Europe via EFFIS | Decided by Phase 2 | Later |
 
 Phases 0 and 1 are built and tested against sample data. Phase 2 is the first
 time the tool meets the live feeds on a server.
@@ -151,4 +151,7 @@ a reasonable later step; none is needed to answer the sentence in section 1.
 - **The wider app carries non-commercial data sources** (`DATA_SOURCES.md`).
   They must be removed or licensed before anyone is charged.
 - **Translations are machine-made** and need a native review before
-  non-English users rely on them.
+  non-English users rely on them. The finder page itself is English-only in v1;
+  the globe panel is translated.
+- **On a phone the five goal cards fill the first screen**, so the list starts
+  below the fold. Fine for v1; worth a compact layout once real users try it.

@@ -479,7 +479,10 @@ function readMarkup(file) {
 
 // Text that never reaches the page as UI: tool results and descriptions for
 // AI clients (MCP and the voice model).
-const NOT_UI = [/^src\/tools\//];
+// The /wildfire finder page (src/wildfire/finder*.js) is English-only in v1:
+// it is served as-is without the app's locale bundle. Translating it is listed
+// in docs/wildfire/BUILD-PLAN.md.
+const NOT_UI = [/^src\/tools\//, /^src\/wildfire\/finder(Page)?\.js$/];
 
 function sourceFiles() {
   return trackedFiles(

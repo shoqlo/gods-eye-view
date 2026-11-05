@@ -11,7 +11,7 @@ explicit statement of what the record does *not* contain. Every row can be flown
 to, and the fire's outline and the wind field switch on so the number and the
 shape on the globe are the same object.
 
-This document is the scope. `DATA-AND-METHOD.md` is the arithmetic and the data
+`BUILD-PLAN.md` is the current plan and its status; read it first. This document is the scope. `DATA-AND-METHOD.md` is the arithmetic and the data
 provenance. `MONETISATION.md` is the commercial plan and what it requires.
 `USER-GUIDE.md` is what a person with a login reads. `../../deploy/RUNBOOK.md`
 is how it is put on a server.

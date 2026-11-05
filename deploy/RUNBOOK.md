@@ -32,11 +32,13 @@ repository; this folder adds the public, authenticated edge around them.
 - **Keys stay on the server.** Provider keys live in the repository's `.env` on
   the server. Provider Settings in the browser is switched off for everybody
   (`GEV_KEY_SETUP_TRUSTED_PEERS=none`), so no visitor can read or change keys.
-- **One link is public.** `/wildfire` is a read-only page of the same ranking,
-  and `/api/fire-risk` is the JSON behind it. Both answer without a login so the
-  list can be shared. Nothing else does: every other path, including every other
-  `/api` route that can spend a key, still asks for a password. Section 5 covers
-  what that page can and cannot do, and how to close it again.
+- **Everything is behind the login.** Send people to `https://<domain>/wildfire`:
+  the Wildfire Watch finder is the front door, and the 3D globe at `/` is one
+  click away. A public, no-login finder is an opt-in (section 5b).
+- **The built app is served, not the development server.** The app container
+  runs `npm run build` and then `vite preview`, so it serves only the build
+  output and never files from the checkout where `.env` lives. The first start
+  takes a few minutes while it builds.
 
 ## 2. Prerequisites
 
@@ -88,10 +90,13 @@ Then check, in this order:
 ```bash
 docker compose -f deploy/compose.hosted.yaml ps        # both services Up, app healthy
 curl -sI https://fires.example.org | head -1           # HTTP/2 401 - the login is working
+curl -sI https://fires.example.org/wildfire | head -1  # HTTP/2 401 too: nothing is public
 docker compose -f deploy/compose.hosted.yaml logs caddy | grep -i -E 'certificate|acme'
 ```
 
-Open the site, log in as `alice`, and confirm the Fire Watch panel lists fires.
+Open `https://<domain>/wildfire`, log in as `alice`, and confirm the finder
+lists fires, that **Fires near a place** finds a town and shows its fire
+weather, and that **Open on the 3D map** opens the globe on that fire.
 If the list is empty but the map works, the FIRMS key is missing — see section 5.
 
 **Do not open the app port to the world.** Only Caddy publishes 80 and 443. The
@@ -162,36 +167,35 @@ hand out a login:
   and keep the token scoped to the assets the instance uses.
 - **NASA FIRMS:** free, no quota worth defending.
 
-## 5b. What is public, and how to close it
+## 5b. Publishing the finder without a login (optional)
 
-`deploy/Caddyfile` exempts exactly two paths from `basic_auth`:
+By default every path needs a login. To let anyone read the finder, paste the
+block from `deploy/public-page.caddyfile.example` into `deploy/Caddyfile` and
+`docker compose -f deploy/compose.hosted.yaml restart caddy`. It exempts exactly
+the page, its two scripts and `/api/fire-risk`.
 
-| Path | What it is |
-| --- | --- |
-| `/wildfire` | A self-contained read-only page of the ranking, served by `server/providers/wildfirePage.js`. |
-| `/api/fire-risk` | The JSON that page reads. Read-only, takes no user-supplied URL, and carries its own rate limit (60 requests a minute per client). |
+Know what that means before you do it:
 
-Everything else — the globe, the panel, and every other `/api` route that can
-spend a provider key — still returns 401. The exemption is a path matcher, not a
-second site, so there is no second configuration to keep in step.
+- **Anonymous readers get the list, the filters and the location view.** Place
+  search and fire weather stay behind the login, so for them those parts say
+  they need a sign-in.
+- **Everyone shares one rate-limit bucket.** Behind Caddy every visitor arrives
+  from Caddy's address. Cached answers are not counted, so ordinary reading is
+  fine, but a burst of uncached requests from the public also slows logged-in
+  users.
+- **The location view embeds ALERTCalifornia camera frames.** Check their terms
+  before showing them to the public.
 
-To close the public page again, delete the `@publicFireList` block from the
-Caddyfile and reload Caddy; the whole site is then behind the login. The page
-route stays in the app, harmlessly unreachable without credentials.
-
-The page deliberately carries no search index, no globe, no watchlist and no
-fly-to, and its tests assert that it names no key, requests nothing but
-`/api/fire-risk`, and links only to `/`. A share page that grew a second job
-would be a second place to leak from.
+To close it again, delete the block and restart Caddy.
 
 ### Imagery in the location view
 
-Each fire on the public page has a **View location** button. It shows the
+Each fire in the finder has a **View location** button. It shows the
 official perimeter on a satellite frame from NASA GIBS, plus the nearest live
 cameras from ALERTCalifornia.
 
 - **Both are fetched by the reader's browser directly.** No key, no proxy, no new
-  route: the public path list above is unchanged, and this server never carries
+  route, and this server never carries
   the imagery traffic.
 - **Their availability is theirs, not ours.** If NASA or ALERTCalifornia is down,
   the list still works and the view says the imagery is unavailable.
@@ -288,7 +292,8 @@ nobody can reach the box while it is still running.
 | **403 Blocked request. This host is not allowed.** | The app's Host allowlist. `GEV_ALLOWED_HOSTS` is set from `DOMAIN` by compose; if `DOMAIN` is empty, the public name is not on the list. |
 | **Map loads, Fire Watch is empty** | `FIRMS_MAP_KEY` missing or rejected. The panel says "KEY REQUIRED" when it is absent. |
 | **Provider Settings does nothing** | By design: `GEV_KEY_SETUP_TRUSTED_PEERS=none`. Keys go in the root `.env` and the app restarts. |
-| **504, "Outdated Optimize Dep", panels missing** | Vite's dependency optimiser is stale after a dependency change. `docker compose ... restart app`. |
+| **App `unhealthy` for the first few minutes** | It is building. `docker compose ... logs -f app` shows the build; the health check allows four minutes. |
+| **A key change has no effect** | Browser-side keys are built into the app. `docker compose ... restart app` rebuilds it. |
 | **Everyone locked out** | `deploy/users.caddyfile` is empty or lost. Re-add each person with `make-users.mjs`. Hashes cannot be recovered. |
 
 ## 11. Local dry run (no Docker)
@@ -308,8 +313,8 @@ DOMAIN=:8080 ACME_EMAIL=ops@example.org APP_UPSTREAM=localhost:4174 \
 
 # Terminal 3 - prove it
 curl -sI http://localhost:8080/                        # 401 + WWW-Authenticate
-curl -s  http://localhost:8080/wildfire | head -c 80   # the public page
-curl -s  http://localhost:8080/api/fire-risk | head -c 200  # the public JSON
+curl -sI http://localhost:8080/wildfire                # 401: the finder needs a login too
+curl -s  -u tester:<password> http://localhost:8080/wildfire | head -c 80  # the finder
 curl -sI http://localhost:8080/api/wind                # 401: the exemption is two paths
 curl -s  -u tester:<password> http://localhost:8080/   # the app's HTML
 ```
@@ -319,6 +324,14 @@ is why no certificate is involved locally. `localhost` rather than
 `127.0.0.1` for `APP_UPSTREAM` because the dev server listens on `::1` only.
 
 ## 12. What has actually been tested
+
+**Since the finder rebuild (this revision), in the build environment:** the
+finder's logic and page are covered by unit tests and a happy-dom run; the page
+was driven in Chromium against sample data (desktop and phone, no console or
+policy errors); `vite build` + `vite preview` serves `/wildfire`, its scripts and
+the APIs. Not exercised: live feeds (the build environment cannot reach them),
+Caddy, and Docker. The list below is from the earlier Windows dry run, when the
+finder was still public; the login-only Caddyfile has not been run yet.
 
 Stated plainly, because a runbook that overstates its evidence is worse than none.
 

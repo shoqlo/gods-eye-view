@@ -202,7 +202,9 @@
     "ΔN",
     "Ⅱ PAUSE",
     "≥ {value} MW",
-    "▲ {frp} MW"
+    "▲ {frp} MW",
+    "Wind {state}",
+    "live"
   ],
   "es": [
     "1090 MHz",
@@ -523,7 +525,10 @@
     "ΔN",
     "Ⅱ PAUSE",
     "≥ {value} MW",
-    "▲ {frp} MW"
+    "▲ {frp} MW",
+    "{value} min",
+    "{value} h",
+    "{count} acres"
   ],
   "it": [
     "1090 MHz",
@@ -698,7 +703,9 @@
     "≥ {value} MW",
     "ΔE",
     "ΔN",
-    "▲ {frp} MW"
+    "▲ {frp} MW",
+    "{value} min",
+    "{value} h"
   ],
   "ja": [
     "1090 MHz",
@@ -881,7 +888,11 @@
     "{value} KM/S",
     "ΔN",
     "▲ {frp} MW",
-    "≥ {value} MW"
+    "≥ {value} MW",
+    "{value} min",
+    "{value} h",
+    "{value} d",
+    "{count} acres"
   ],
   "ru": [
     "AIS: --",
@@ -999,10 +1010,8 @@
     "NVG",
     "REC",
     "SRC {value}",
-
     "S2 GhostMaps",
     "S2 · {name}",
-    "SRC {value}",
     "Sentinel-2",
     "Techno",
     "Trance",
