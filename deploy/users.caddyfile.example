@@ -1,0 +1,12 @@
+# One line per person who may log in. Format:
+#
+#   username $2a$14$<bcrypt hash>
+#
+# Generate the lines with `node deploy/make-users.mjs <username>`; do not hand
+# write them, and never put a plaintext password here.
+#
+# This file is mounted read-only into Caddy. The imported block must not be
+# empty, so replace the example line before the first start.
+#
+# Example line for user "demo" with password "change-me-now":
+# demo $2a$14$0YbZ0h3m6uJ2UO6H0X0oOeK4T1rCl2m8bT0yq3sS6Q6XK9dQ1u0Wm

@@ -1267,5 +1267,6 @@
   "src/voice/geminiTextChat.js",
   "src/voice/panelLayout.js",
   "src/voice/textChat.js",
-  "src/voice/textProtocol.js"
+  "src/voice/textProtocol.js",
+  "deploy/make-users.mjs"
 ]

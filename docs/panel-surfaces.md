@@ -104,6 +104,14 @@ dynamically mounted panel must own its disclosure: its own state, button and
 Escape, bound and disposed with `bindPanelDisclosure` /
 `collapsePanelOnEscape` from `panelDisclosure.js` (which bind Escape only). Do not rerun the whole application chrome
 initializer just to add one panel. `layoutLeftPanelRail` and
+dynamically mounted panel must bind and dispose its own disclosure using
+`bindPanelDisclosure` / `collapsePanelOnEscape` from `panelDisclosure.js`, with
+the application owning state changes. Do not rerun the whole application chrome
+initializer just to add one panel. A panel that mounts into a rail the chrome has
+not built yet must own that wait: the Wildfire Watch panel watches for
+`#left-panel-stack` in `initFireWatchPanel` and cancels the watch in `destroy`,
+because mounting straight into a missing rail fails silently and leaves no panel
+at all. `layoutLeftPanelRail` and
 `layoutRightPanelRail` accept arbitrary direct `data-panel-id` children; their
 host owns layout scheduling, observations and collapse callbacks. A rail
 never writes a panel's classes: it calls `onCollapse(panel, {collapsed,

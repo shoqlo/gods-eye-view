@@ -27,6 +27,8 @@ import { mapillaryProxy } from './mapillary.js';
 import { keySetupEndpoint } from '../standalone/key-setup.js';
 import { weatherProxy } from './weather.js';
 import { firePerimetersProxy } from './firePerimeters.js';
+import { fireRiskProxy } from './fireRisk.js';
+import { wildfirePage } from './wildfirePage.js';
 import { gnssIntegrityProxy } from './gnssIntegrity.js';
 import { ghostMapsProxy } from './ghostMaps.js';
 import { droneAirspaceProxy } from './droneAirspace.js';
@@ -80,6 +82,8 @@ function localProviderPlugins({
     mapillaryProxy(),
     firePerimetersProxy(),
     fireWeatherProxy(),
+    fireRiskProxy(),
+    wildfirePage(),
     gnssIntegrityProxy(),
     ghostMapsProxy(),
     droneAirspaceProxy(),

@@ -26,5 +26,11 @@ qa-artifacts/
 pinokio/ENVIRONMENT
 pinokio/.installed
 
+# Hosted deployment: the domain/ACME settings and the list of who may log in.
+# Both are per-server state. deploy/.env matches the .env rule above, but say so
+# explicitly so a later narrowing of that rule cannot start committing it.
+deploy/.env
+deploy/users.caddyfile
+
 # Transient: a release interrupted mid-assembly (npm run changelog recovers it)
 changelog.d/.assembling/
