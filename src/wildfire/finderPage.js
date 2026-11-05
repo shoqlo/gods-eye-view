@@ -186,6 +186,12 @@ function number(value, digits = 0) {
     : '';
 }
 
+/** "1 fire", "12 fires". */
+function fireCount(count) {
+  const noun = count === 1 ? 'fire' : 'fires';
+  return `${count.toLocaleString('en-US')} ${noun}`;
+}
+
 function ago(ms) {
   if (!finite(ms)) return 'at an unknown time';
   const minutes = Math.max(0, (Date.now() - ms) / 60_000);
@@ -616,7 +622,7 @@ function render() {
     const counted = findFires(zones, withGoal(criteria, goal), context);
     slot.textContent = counted.needsPlace
       ? 'choose a place'
-      : `${counted.rows.length.toLocaleString('en-US')} ${counted.rows.length === 1 ? 'fire' : 'fires'}`;
+      : fireCount(counted.rows.length);
   }
 
   if (!payload) {
@@ -855,7 +861,7 @@ function refreshGoalCounts() {
     bands: bands(),
     watched,
   });
-  slot.textContent = `${counted.rows.length} ${counted.rows.length === 1 ? 'fire' : 'fires'}`;
+  slot.textContent = fireCount(counted.rows.length);
 }
 
 let hashOpened = false;
@@ -900,9 +906,7 @@ function downloadCsv() {
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(link.href), 10_000);
-  flash(
-    `Saved ${current.rows.length} ${current.rows.length === 1 ? 'fire' : 'fires'}`,
-  );
+  flash(`Saved ${fireCount(current.rows.length)}`);
 }
 
 /* ------------------------------------------------------- the location view */
