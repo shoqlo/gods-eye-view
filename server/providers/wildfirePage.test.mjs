@@ -182,6 +182,16 @@ test('the location view is honest about what it is and who supplies it', () => {
   assert.match(WILDFIRE_PAGE_HTML, /ALERTCalifornia/);
   assert.match(WILDFIRE_PAGE_HTML, /covers California only/);
   assert.match(WILDFIRE_PAGE_HTML, /may not be looking at the fire/);
+  // Black is missing swath data, not a burn scar, and the view must say so.
+  assert.match(WILDFIRE_PAGE_HTML, /missing data, not necessarily a burn scar/);
+});
+
+test('the location view explains how it chose a frame', () => {
+  // The default opens on the newest usable frame across both layers, and says
+  // which trade it made rather than silently showing an older or blank one.
+  assert.match(WILDFIRE_PAGE_HTML, /Newest frame is the daily pass/);
+  assert.match(WILDFIRE_PAGE_HTML, /No 30 m pass in the last/);
+  assert.match(WILDFIRE_PAGE_HTML, /No usable pass in the last/);
 });
 
 test('the page builds rows with textContent, never innerHTML', () => {

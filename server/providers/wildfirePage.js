@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Public, read-only Wildfire Watch page at `/wildfire`.
  *
  * The panel in `src/ui/fireWatch.js` lives inside the application, which is a
@@ -536,6 +536,13 @@ ${BAND_CHOICES.map(
         encodeURIComponent(camera.stream) +
         '/latest-frame.jpg?t=' +
         Date.now();
+      img.addEventListener('error', function () {
+        img.hidden = true;
+        var missing = document.createElement('p');
+        missing.className = 'cam-note';
+        missing.textContent = 'Frame unavailable right now.';
+        figure.insertBefore(missing, caption);
+      });
       var caption = document.createElement('figcaption');
       var name = document.createElement('strong');
       name.textContent = text(camera.name);
@@ -588,6 +595,14 @@ ${BAND_CHOICES.map(
     var heat = document.createElement('img');
     heat.alt = '';
     heat.hidden = true;
+    base.addEventListener('error', function () {
+      note.textContent =
+        'The satellite image could not be loaded. Check your connection, or use Google Maps below.';
+    });
+    heat.addEventListener('error', function () {
+      heat.hidden = true;
+      heatBox.checked = false;
+    });
 
     var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', '0 0 ' + IMAGERY.width + ' ' + IMAGERY.height);
@@ -676,66 +691,158 @@ ${BAND_CHOICES.map(
         });
     }
 
-    function draw(auto) {
+    // Walk back from the requested day until GIBS has a frame with pixels in
+    // it, or the window closes. Resolves with the last day tried either way.
+    function probe(layerId, from, oldest) {
+      var day = from;
+      function step() {
+        var url = gibsUrl(
+          bounds,
+          day,
+          IMAGERY.layers[layerId].id,
+          'image/jpeg',
+        );
+        return frameBytes(url).then(function (size) {
+          if (size < 0 || size >= IMAGERY.minFrameBytes)
+            return { layer: layerId, day: day, usable: true };
+          if (day <= oldest) return { layer: layerId, day: day, usable: false };
+          day = shiftDay(day, -1);
+          return step();
+        });
+      }
+      return step();
+    }
+
+    function draw(auto, findNewest) {
       request += 1;
       var generation = request;
-      var spec = IMAGERY.layers[state.layer];
       var requested = state.day;
-      var day = requested;
-      var oldest = oldestDay();
 
-      function settle(found, blank) {
+      function settle(layerId, found, message) {
         if (generation !== request) return;
+        var spec = IMAGERY.layers[layerId];
+        state.layer = layerId;
         state.day = found;
+        layer.value = layerId;
         base.src = gibsUrl(bounds, found, spec.id, 'image/jpeg');
         base.alt = 'Satellite view of ' + text(zone.name) + ' on ' + found;
         heat.src = gibsUrl(bounds, found, IMAGERY.heat, 'image/png');
         dayLabel.textContent = found + ' \u00b7 ' + spec.label;
-
-        var message = 'Latest pass for this spot on ' + found + '.';
-        if (blank) {
-          message =
-            'No usable pass on ' +
-            requested +
-            ' in the last ' +
-            IMAGERY.days +
-            ' days. Try the daily layer, or come back after the next pass.';
-        } else if (found !== requested) {
-          message =
-            'Newest usable pass: ' +
-            found +
-            ' (' +
-            requested +
-            ' and later days had none).';
-        }
         note.textContent =
-          message +
-          ' A satellite sees this point once or twice a day and cloud can hide the ground; step back a day if the frame is blank.';
-
-        previous.disabled = found <= oldest;
+          (message || 'Pass for this spot on ' + found + '.') +
+          ' A satellite sees this point once or twice a day and cloud can hide the ground; step back a day if the frame is blank. Black areas are missing data, not necessarily a burn scar.';
+        previous.disabled = found <= oldestDay();
         next.disabled = found >= todayUtc();
         heat.hidden = !heatBox.checked;
       }
 
-      function step() {
-        var url = gibsUrl(bounds, day, spec.id, 'image/jpeg');
-        frameBytes(url).then(function (size) {
-          if (generation !== request) return;
-          if (size < 0 || size >= IMAGERY.minFrameBytes) {
-            settle(day, false);
-            return;
-          }
-          if (day <= oldest) {
-            settle(day, true);
-            return;
-          }
-          day = shiftDay(day, -1);
-          step();
-        });
+      if (!auto) {
+        settle(state.layer, requested, '');
+        return;
       }
 
-      if (auto) step();
-      else settle(requested, false);
+      if (!findNewest) {
+        var windowDays = IMAGERY.days;
+        probe(state.layer, requested, oldestDay()).then(
+          function (result) {
+            if (generation !== request) return;
+            if (result.usable) {
+              settle(
+                state.layer,
+                result.day,
+                result.day !== requested
+                  ? 'Newest usable pass: ' +
+                      result.day +
+                      ' (' +
+                      requested +
+                      ' and later days had none).'
+                  : '',
+              );
+            } else {
+              settle(
+                state.layer,
+                result.day,
+                'No usable pass in the last ' +
+                  windowDays +
+                  ' days. Try again after the next pass.',
+              );
+            }
+          },
+        );
+        return;
+      }
+
+      // Opening the view: ask both layers and show the newest usable frame.
+      // Detail wins only when it is at least as fresh as the daily frame.
+      probe('hls', requested, oldestDay()).then(function (hls) {
+        if (generation !== request) return;
+        if (hls.usable && hls.day === requested) {
+          settle('hls', hls.day, '');
+          return;
+        }
+        probe('viirs', requested, oldestDay()).then(function (viirs) {
+          if (generation !== request) return;
+          if (hls.usable && viirs.usable) {
+            if (viirs.day > hls.day) {
+              settle(
+                'viirs',
+                viirs.day,
+                'Newest frame is the daily pass on ' +
+                  viirs.day +
+                  '; the 30 m detail pass is from ' +
+                  hls.day +
+                  '.',
+              );
+            } else {
+              settle(
+                'hls',
+                hls.day,
+                hls.day !== requested
+                  ? 'Newest usable pass: ' +
+                      hls.day +
+                      ' (' +
+                      requested +
+                      ' and later days had none).'
+                  : '',
+              );
+            }
+            return;
+          }
+          if (hls.usable) {
+            settle(
+              'hls',
+              hls.day,
+              hls.day !== requested
+                ? 'Newest usable pass: ' +
+                    hls.day +
+                    ' (' +
+                    requested +
+                    ' and later days had none).'
+                : '',
+            );
+            return;
+          }
+          if (viirs.usable) {
+            settle(
+              'viirs',
+              viirs.day,
+              'No 30 m pass in the last ' +
+                IMAGERY.days +
+                ' days; showing the daily frame from ' +
+                viirs.day +
+                '.',
+            );
+            return;
+          }
+          settle(
+            'hls',
+            hls.day,
+            'No usable pass in the last ' +
+              IMAGERY.days +
+              ' days. Try again after the next pass.',
+          );
+        });
+      });
     }
 
     previous.addEventListener('click', function () {
@@ -748,12 +855,13 @@ ${BAND_CHOICES.map(
     });
     layer.addEventListener('change', function () {
       state.layer = layer.value;
-      draw(true);
+      draw(true, false);
     });
     heatBox.addEventListener('change', function () {
       heat.hidden = !heatBox.checked;
     });
-    draw(true);
+    draw(true, true);
+
 
     var cams = document.createElement('div');
     cams.className = 'cams';
@@ -903,9 +1011,9 @@ ${BAND_CHOICES.map(
   var hashOpened = false;
 
   function openFromHash() {
-    if (hashOpened) return;
+    if (hashOpened) return true;
     var id = decodeURIComponent((location.hash || '').replace(/^#/, ''));
-    if (!id) return;
+    if (!id) return false;
     var items = list.querySelectorAll('li.row');
     for (var index = 0; index < items.length; index += 1) {
       if (items[index].dataset.id !== id) continue;
@@ -919,13 +1027,19 @@ ${BAND_CHOICES.map(
         if (button) button.click();
       }
       items[index].scrollIntoView({ block: 'center' });
-      return;
+      return true;
     }
+    return false;
   }
 
-  function render() {
+  function render(preserveOpen) {
     var zones = visible();
-    list.textContent = '';
+    // A fire that is open is being read. The five-minute refresh must not yank
+    // the satellite frame and cameras out from under the reader; it updates the
+    // counts and waits for the row to be closed.
+    var keepRows =
+      preserveOpen === true && !!list.querySelector('li.row details[open]');
+    if (!keepRows) list.textContent = '';
     if (payload && payload.zones) {
       var counted = payload.counts && payload.counts.scored;
       var total = typeof counted === 'number' ? counted : payload.zones.length;
@@ -966,11 +1080,13 @@ ${BAND_CHOICES.map(
     empty.textContent = message;
     empty.hidden = !message;
 
-    zones.forEach(function (zone) {
-      list.appendChild(row(zone));
-    });
+    if (!keepRows) {
+      zones.forEach(function (zone) {
+        list.appendChild(row(zone));
+      });
 
-    openFromHash();
+      openFromHash();
+    }
   }
 
   function refresh() {
@@ -986,13 +1102,13 @@ ${BAND_CHOICES.map(
           throw new Error('malformed response');
         payload = value;
         error = null;
-        render();
+        render(true);
       })
       .catch(function () {
         error = payload
           ? 'Refresh failed. Showing the last index.'
           : 'The live index is unavailable (the server could not reach the incident feed).';
-        render();
+        render(true);
       });
   }
 
@@ -1004,7 +1120,9 @@ ${BAND_CHOICES.map(
   });
   window.addEventListener('hashchange', function () {
     hashOpened = false;
-    openFromHash();
+    // The target may not be in the preserved rows (a fire that arrived after
+    // the list was drawn). Rebuild once so the deep link can land.
+    if (!openFromHash()) render();
   });
   setInterval(function () {
     if (!document.hidden) refresh();

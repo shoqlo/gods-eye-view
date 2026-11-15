@@ -186,6 +186,16 @@
   border-color: var(--glass-border-hover);
 }
 
+/* The live view is a link, not a button: same chip shape, no page underline. */
+#fire-watch-panel a.fire-watch-chip {
+  text-decoration: none;
+}
+
+#fire-watch-panel a.fire-watch-chip[aria-disabled='true'] {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
 #fire-watch-panel .fire-watch-chip:focus-visible {
   outline: 1px solid var(--accent);
   outline-offset: 1px;

@@ -498,6 +498,15 @@ function mountPanel({
     flyButton.disabled = !viewer || (!zone.centroid && !zone.bounds);
     flyButton.addEventListener('click', () => flyToZone(zone));
 
+    // The globe shows the place; the public page shows the ground on it.
+    // A new tab, so the console keeps its camera and the reader keeps the list.
+    const liveLink = el('a', 'fire-watch-chip', t('LIVE VIEW'));
+    liveLink.href = `/wildfire#${encodeURIComponent(zone.id ?? '')}`;
+    liveLink.target = '_blank';
+    liveLink.rel = 'noopener';
+    liveLink.title = t('Live cameras and the latest satellite pass');
+    if (!zone.id) liveLink.setAttribute('aria-disabled', 'true');
+
     const watchButton = el(
       'button',
       'fire-watch-chip',
@@ -518,7 +527,7 @@ function mountPanel({
       render();
     });
 
-    actions.append(flyButton, watchButton);
+    actions.append(flyButton, liveLink, watchButton);
     detail.append(actions);
     row.append(detail);
     return row;
