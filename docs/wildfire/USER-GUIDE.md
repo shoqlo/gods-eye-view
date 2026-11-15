@@ -162,7 +162,13 @@ row:
 Two things to hold on to. A satellite is not a live video feed: it sees a given
 point once or twice a day, the image is usually a day or more old, and cloud can
 hide the ground completely. And the page skips days with no usable frame, saying
-so in the caption rather than showing you black.
+so in the caption rather than showing you black. Black areas inside a frame are
+missing satellite data, not necessarily a burn scar.
+
+If you are in the console, each fire's detail view has **LIVE VIEW** beside
+**FLY TO FIRE**. FLY TO FIRE inspects the place in 3D on the globe; LIVE VIEW
+opens this page at that fire's location, in a new tab, so you keep the console
+where it was.
 
 For high-resolution inspection, use **Google Maps satellite** in the same view.
 Its imagery is far sharper but often months old, which is the opposite trade.

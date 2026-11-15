@@ -47,7 +47,8 @@ mistaken for any of them.
 | Presentation helpers | `src/wildfire/display.js` | Formatting and translation of every number and label |
 | Search, filter, sort | `src/wildfire/filter.js` | The pure predicate and ordering behind the panel's controls |
 | API aggregator | `server/providers/fireRisk.js` | `/api/fire-risk`, caching, rate limits, payload shape |
-| Panel | `src/ui/fireWatch.js` | The rail panel, the filters, the watchlist, the fly-to |
+| Panel | `src/ui/fireWatch.js` | The rail panel, the filters, the watchlist, the fly-to, the LIVE VIEW link |
+| Public page | `server/providers/wildfirePage.js` | `/wildfire`, the shared list and the per-fire location view |
 | Styling | `src/ui/styles/fire-watch.css` | Panel appearance, using the app's existing tokens |
 
 The engine and the aggregator are importable on their own. A future report
@@ -65,6 +66,10 @@ no new upstream dependency and no new API key:
   each incident's centroid.
 - **Exposure** — bundled OpenStreetMap-derived datacenter and dam packs
   (ODbL 1.0, attribution shown in the panel's evidence line).
+
+The location view adds two presentation-only sources, fetched by the reader's
+browser and never scored: NASA GIBS satellite frames and ALERTCalifornia live
+camera frames. Neither needs a key, and neither passes through this server.
 
 `DATA-AND-METHOD.md` records the exact schema quirks and the gaps in the live
 feed that the engine has to survive.

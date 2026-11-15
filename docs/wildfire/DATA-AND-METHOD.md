@@ -58,6 +58,22 @@ population field, so people are not in the score. This is the largest gap betwee
 the present index and a commercial risk product, and it is stated in the panel
 and in the API's `limitations[]`.
 
+### 1.4 Presentation imagery — not scored
+
+The public page can show the ground at a fire, and none of it feeds the score:
+
+- **NASA GIBS** (keyless WMS) serves HLS 30 m true colour, VIIRS 375 m true
+  colour and false colour, plus VIIRS thermal anomalies. Frames are hours to
+  days old; the page skips days with no usable pass and states which day and
+  layer it chose.
+- **ALERTCalifornia** (UC San Diego) publishes camera states as GeoJSON and one
+  `latest-frame.jpg` per camera, updated about every 15 seconds. Frames are live,
+  but cover California only and may point away from the fire.
+
+Both are fetched by the reader's browser directly. They are attribution-bearing
+external services, not inputs to `scoreZone`, and a failure in either leaves the
+ranking untouched.
+
 ## 2. The score
 
 ```
@@ -173,12 +189,14 @@ hiding it inside an optimistic score.
 | `limit` | 1–200 ranked zones returned | 40 |
 | `minBand` | `critical` \| `high` \| `elevated` \| `watch` \| `low` | none |
 | `includeContained` | `1` \| `true` \| `yes` | off |
+| `outline` | `1` \| `true` \| `yes` adds each zone's simplified perimeter ring | off |
 
 Response: `generatedAt`, `riskVersion`, `conditions` (wind status, perimeter row
 count, asset total), `counts` (per band, per confidence, acres, scored), `zones[]`,
 `limitations[]`. Every zone carries `score`, `band`, `bandLabel`, `bandColour`,
 `confidence`, `components`, `reasons[]`, `flags[]`, `modifiers[]`,
-`exposureDetail`, `centroid`, `bounds`, `acres`, `ageHours`.
+`exposureDetail`, `centroid`, `bounds`, `acres`, `ageHours` — and `outline` when
+requested: the largest ring, at most 96 points, rounded to five decimals.
 
 Behaviour:
 

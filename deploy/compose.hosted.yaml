@@ -18,6 +18,10 @@ services:
       context: ..
       dockerfile: Dockerfile
     restart: unless-stopped
+    # The checkout is bind-mounted, so the process must run as the user who owns
+    # it or Vite cannot write its cache or .gev-cache. Defaults to the first
+    # normal Linux user; override in deploy/.env when the host differs.
+    user: '${HOST_UID:-1000}:${HOST_GID:-1000}'
     environment:
       # The app refuses a Host it does not know. Caddy forwards the public name,
       # so the public name has to be on the list (build/allowedHosts.js).
@@ -47,12 +51,18 @@ services:
       timeout: 10s
       start_period: 60s
       retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
 
   caddy:
     image: caddy:2.11-alpine
     restart: unless-stopped
     depends_on:
-      - app
+      app:
+        condition: service_healthy
     environment:
       DOMAIN: ${DOMAIN}
       ACME_EMAIL: ${ACME_EMAIL}
@@ -69,6 +79,11 @@ services:
       - ./users.caddyfile:/etc/caddy/users.caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
     networks:
       - web
 

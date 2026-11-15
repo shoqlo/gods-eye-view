@@ -71,6 +71,8 @@ cd gev
 # 3. Who we are
 cp deploy/.env.example deploy/.env
 $EDITOR deploy/.env               # DOMAIN=fires.example.org, ACME_EMAIL=you@example.org
+# If `id -u` is not 1000, also set HOST_UID and HOST_GID to your numbers: the
+# app runs as that user so it can write its cache into the bind-mounted checkout.
 
 # 4. Keys (the root .env, inside the bind mount, so the container reads it)
 cp .env.example .env
@@ -125,6 +127,10 @@ Rules worth keeping:
   only record of who was looking.
 - **Removing someone is a line and a restart.** Their browser keeps its
   watchlist; it stops being able to reach the site.
+- **Removing the last user is a valid lockout, not a broken site.** The imported
+  file is then comments only, which Caddy accepts: every request returns 401 and
+  nobody can log in. That is a safe way to close the console, and adding a user
+  again reopens it.
 - Restarting **Caddy only** is enough. The app does not restart and no data
   moves.
 
@@ -327,7 +333,11 @@ Stated plainly, because a runbook that overstates its evidence is worse than non
 - `caddy fmt` and `caddy validate` both pass on this `Caddyfile`.
 - Anonymous `GET /` returns **401** with `WWW-Authenticate: Basic realm="restricted"`.
 - Anonymous `GET /wildfire` and `/wildfire/` return **200**, `text/html`, the page.
-- Anonymous `GET /api/fire-risk?limit=100` returns **200** with 77 zones.
+- Anonymous `GET /api/fire-risk?limit=100` returns **200** with zones and bands; the
+  count follows the live feed (29 when this was last run).
+- Anonymous `GET /api/fire-risk?limit=1&outline=1` returns the zone with its
+  perimeter ring (53 points for the fire checked); the ring is absent without
+  `outline=1`.
 - Anonymous `GET /api/wind` and `/api/fire-perimeters` return **401** — the public
   matcher covers the fire list and nothing else.
 - Anonymous `GET /wildfire/deep` returns **401** (it falls through to the login
@@ -340,14 +350,28 @@ Stated plainly, because a runbook that overstates its evidence is worse than non
   an unknown username both return **401**.
 - `make-users.mjs` adds, lists, removes, and rejects duplicates, short passwords,
   mismatched passwords and invalid usernames.
-- The public page renders 77 rows live, searches a name down to one row, shows
-  the empty-filter sentence for a miss and for a band nothing reaches, and opens
-  a row to its reasons, components and evidence line. Zero console errors.
+- The public page renders the full feed live, searches a name down to one row,
+  shows the empty-filter sentence for a miss and for a band nothing reaches, and
+  opens a row to its reasons, components and evidence line. Zero console errors.
+- **View location** opens a satellite frame with the perimeter drawn on it, skips
+  days with no usable frame, and states which day and layer it chose. The default
+  compares the 30 m and daily layers and shows the newer usable one; neither
+  requires a key and neither passes through this server.
+- An open location view survives the five-minute refresh: the refresh updates the
+  counts and leaves the open row, its frame and its cameras in place.
+- Near a California fire, the nearest ALERTCalifornia cameras load with their own
+  timestamp (frames seconds to minutes old). A fire with no camera within 60 km
+  says so, and names the California-only coverage.
+- The console's **LIVE VIEW** link on a fire row resolves to
+  `/wildfire#<incident id>`, opens in a new tab and reaches the same location view.
+- The page at 390×844 px has no horizontal overflow; the date, layer and heat
+  controls wrap onto two lines.
 
 **Not proven here:** `compose.hosted.yaml` has never been built or run, because
 Docker is not installed on the machine this was written on — and there is no WSL
-or Podman to borrow either. The file does parse as YAML, its service, volume and
-port structure is what this runbook describes, and the image tag
-(`caddy:2.11-alpine`) matches the binary that was validated, but the first real
-`up -d --build` is the first real test. Expect to spend ten minutes on section 3
-and section 10 the first time.
+or Podman to borrow either. The file does parse as YAML, every service, volume,
+network and port reference resolves, the build context and both mounted files
+exist, and the image tag (`caddy:2.11-alpine`) matches the binary that was
+validated. The bind-mount UID and the health-gated Caddy start are new and have
+not been exercised; the first real `up -d --build` is the first real test. Expect
+to spend ten minutes on section 3 and section 10 the first time.
