@@ -21,6 +21,27 @@ The panel says it on every render and it is worth repeating: this ranks where
 attention is warranted. It is not a forecast of where a fire will go, and it is
 not a life-safety product.
 
+## 1b. The wildfire console
+
+The product is the original God's Eye View globe with a wildfire skin, at
+`/fire`. It opens on the continental United States with the fire layers already
+running, the layer list narrowed to active fires, fire perimeters, wind and the
+two exposure packs, and the panels for aircraft, CCTV, street level and contacts
+hidden.
+
+The Fire Watch panel is the same list described below. **FLY TO FIRE** frames an
+incident on the globe and turns on its perimeter and wind, **LIVE VIEW** opens
+the share page at that fire, and **WATCH** keeps it. Selecting a row shows the
+reasons, the four score components and the evidence line.
+
+On a phone, the bottom bar becomes **Fires**, **Search** and **More**. Fires opens
+the list with the layer toggles below it.
+
+`/` opens the wildfire console (it redirects to `/fire` after login). `/full` is
+the full, unskinned console if you want the original toolbox; it is the same
+application, the same scene and the same login. `/wildfire` is the public,
+read-only share page.
+
 ## 2. What you see on arrival
 
 The panel opens expanded, at the top of the left rail, and reads:
@@ -137,8 +158,8 @@ it. Clearing your browser data clears it.
 
 There is a second, smaller view at `/wildfire` — the same ranking, the same
 search and band filter, no globe and no login. You can send that link to anyone;
-they will see the fires and nothing else. The full console at `/` still asks for
-a password, because it can spend the provider keys.
+they will see the fires and nothing else. The wildfire console at `/fire` still
+asks for a password, because it can spend the provider keys.
 
 The share page is deliberately plain: it lists, it filters, it opens a row's
 reasons, and it stops there. It has no watchlist, so a fire you keep is kept in

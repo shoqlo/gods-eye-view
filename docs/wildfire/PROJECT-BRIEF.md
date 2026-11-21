@@ -49,6 +49,9 @@ mistaken for any of them.
 | API aggregator | `server/providers/fireRisk.js` | `/api/fire-risk`, caching, rate limits, payload shape |
 | Panel | `src/ui/fireWatch.js` | The rail panel, the filters, the watchlist, the fly-to, the LIVE VIEW link |
 | Public page | `server/providers/wildfirePage.js` | `/wildfire`, the shared list and the per-fire location view |
+| Skin rules | `src/wildfire/skin.js` | The `/fire` path, the layer allowlist, the defaults |
+| Skin application | `src/app/wildfireSkin.js` | Branding, layer switching, the national view |
+| Skin styling | `src/ui/styles/wildfire-skin.css` | Hides the rail panels the fire job does not use |
 | Styling | `src/ui/styles/fire-watch.css` | Panel appearance, using the app's existing tokens |
 
 The engine and the aggregator are importable on their own. A future report
@@ -76,9 +79,8 @@ feed that the engine has to survive.
 
 ## What is built
 
-- 63 unit tests across the engine, the display helpers, the filter module and
-  the API aggregator.
-- A panel that leads the left rail (the rail keeps its first expanded panel, so
+- The wildfire suites — engine, display helpers, filter, risk index, public page
+  and skin — run by `npm test`.- A panel that leads the left rail (the rail keeps its first expanded panel, so
   a list mounted further down was folded away on arrival), filters by band with
   live counts per option, sorts by risk, size or recency, searches one field for
   name, state or ID, keeps a local watchlist, refreshes every five minutes and
@@ -90,6 +92,11 @@ feed that the engine has to survive.
   explanation, not features.
 - Copy translated into Spanish, Russian and Simplified Chinese, with the
   catalogue kept in step by `npm run i18n`.
+- The wildfire console at `/fire`: the original God's Eye View scene with a
+  dedicated skin. It opens on the continental United States with active fires,
+  perimeters and wind running, a five-row fire layer list, the unrelated rail
+  panels hidden, and no general mission card. The root `/` redirects to it; the
+  full console remains at `/full`.
 - A public read-only view at `/wildfire`: the same ranking as a self-contained
   page with search and a band filter, so the list can be shared without handing
   out the console. `server/providers/wildfirePage.js`, exempted from the login by
