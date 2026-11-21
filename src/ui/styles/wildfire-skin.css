@@ -1,0 +1,20 @@
+/* Wildfire skin (`/fire`).
+ *
+ * The console is the same one; this stylesheet only removes the panels that
+ * belong to other jobs. The layers themselves are filtered in ui/layerPanel.js
+ * and switched in app/wildfireSkin.js, so nothing here hides data that the
+ * panel still offers.
+ */
+
+body.skin-wildfire #cctv-panel,
+body.skin-wildfire #street-level-panel,
+body.skin-wildfire #global-context-panel,
+body.skin-wildfire #traffic-sync-chip,
+body.skin-wildfire #cctv-sync-chip {
+  display: none !important;
+}
+
+/* A fire accent on the one word that says what this console is for. */
+body.skin-wildfire .title-accent {
+  color: #ff7a3d;
+}

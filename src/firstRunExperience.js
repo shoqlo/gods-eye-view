@@ -214,6 +214,9 @@ export function shouldShowFirstRun({
   location = globalThis.location,
 } = {}) {
   if (hasShareState) return false;
+  // The wildfire skin is a single-job console with its layers already on; the
+  // mission card would offer aircraft, space and earthquakes instead.
+  if (/^\/fire\/?$/.test(String(location?.pathname || ''))) return false;
   const params = new URLSearchParams(location?.search || '');
   if (params.get('welcome') === '0') return false;
   // An embedded globe never shows the welcome launcher.

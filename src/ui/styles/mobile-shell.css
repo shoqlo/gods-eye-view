@@ -192,6 +192,21 @@ body.mobile-shell[data-mobile-sheet='more'] #right-context-rail > #pp-toggles {
   transform: none;
 }
 
+/* Wildfire skin: the fire list is the point, so it leads the Layers sheet
+   rather than sitting below the layer toggles. */
+body.mobile-shell.skin-wildfire[data-mobile-sheet='layers']
+  #left-panel-stack
+  > #fire-watch-panel {
+  position: relative;
+  inset: auto;
+  display: block;
+  order: -1;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  transform: none;
+}
+
 /* ── Dock: voice floats above the tab bar; search and presets are sheets ─ */
 body.mobile-shell #command-dock {
   /* The dock's tray rules size voice by this basis; a column makes it a height. */

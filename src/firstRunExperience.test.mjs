@@ -142,6 +142,21 @@ test('a share link never sees the launcher — its author already chose the view
   assert.equal(shouldShowFirstRun({ hasShareState: true, ...fresh() }), false);
 });
 
+test('the wildfire skin never sees the general mission launcher', () => {
+  for (const pathname of ['/fire', '/fire/']) {
+    assert.equal(
+      shouldShowFirstRun({ ...fresh(), location: { search: '', pathname } }),
+      false,
+      pathname,
+    );
+  }
+  // The original console still gets it.
+  assert.equal(
+    shouldShowFirstRun({ ...fresh(), location: { search: '', pathname: '/' } }),
+    true,
+  );
+});
+
 test('privacy-restricted storage fails open and every write stays best-effort', () => {
   const blocked = {
     getItem: () => {

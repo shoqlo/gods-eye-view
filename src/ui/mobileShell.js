@@ -21,22 +21,49 @@ export const MOBILE_SHEET_ATTR = 'data-mobile-sheet';
 /**
  * Panels each sheet expands. A sheet also shows its rail's other panels
  * collapsed (Scenes under Layers), per styles/mobile-shell.css.
+ *
+ * The wildfire skin puts the Fire Watch list at the top of the Layers sheet and
+ * drops the Camera and Context tabs, whose panels the skin hides.
  */
+const WILDFIRE_SKIN =
+  typeof globalThis.location !== 'undefined' &&
+  String(globalThis.location.pathname || '').replace(/\/+$/, '') === '/fire';
+
 export const MOBILE_SHEET_PANELS = Object.freeze({
-  layers: Object.freeze(['data-panel']),
+  layers: Object.freeze(
+    WILDFIRE_SKIN ? ['fire-watch-panel', 'data-panel'] : ['data-panel'],
+  ),
   cameras: Object.freeze(['cctv-panel', 'street-level-panel']),
   context: Object.freeze(['global-context-panel']),
   search: Object.freeze(['location-bar']),
   more: Object.freeze(['control-panel', 'pp-toggles']),
 });
 
-export const MOBILE_TABS = Object.freeze([
+const ALL_MOBILE_TABS = [
   Object.freeze({ sheet: 'layers', label: msg('Layers'), icon: 'layers' }),
   Object.freeze({ sheet: 'cameras', label: msg('Cameras'), icon: 'videocam' }),
   Object.freeze({ sheet: 'context', label: msg('Context'), icon: 'radar' }),
   Object.freeze({ sheet: 'search', label: msg('Search'), icon: 'search' }),
   Object.freeze({ sheet: 'more', label: msg('More'), icon: 'more_horiz' }),
-]);
+];
+
+export const MOBILE_TABS = Object.freeze(
+  WILDFIRE_SKIN
+    ? [
+        Object.freeze({
+          sheet: 'layers',
+          label: msg('Fires'),
+          icon: 'local_fire_department',
+        }),
+        ...ALL_MOBILE_TABS.filter(
+          (tab) =>
+            tab.sheet !== 'layers' &&
+            tab.sheet !== 'cameras' &&
+            tab.sheet !== 'context',
+        ),
+      ]
+    : ALL_MOBILE_TABS,
+);
 
 /**
  * Surfaces that own the screen close the open sheet and keep sheets closed.

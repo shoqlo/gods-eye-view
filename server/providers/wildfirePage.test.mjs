@@ -148,7 +148,7 @@ test('the page makes no request outside the public allowlist', () => {
     (match) => match[1],
   );
   const internal = hrefs.filter((href) => href.startsWith('/'));
-  assert.deepEqual(internal, ['/']);
+  assert.deepEqual(internal, ['/fire']);
   assert.ok(hrefs.some((href) => href.startsWith('data:image/svg+xml')));
 });
 

@@ -36,8 +36,23 @@ function lifecycleStateLabel(lifecycleState) {
   return t(lifecycleState === 'enabling' ? msg('ENABLING') : msg('DISABLING'));
 }
 
+// The wildfire skin (`/fire`) keeps one job's layers in the list. This mirrors
+// WILDFIRE_LAYER_IDS in src/wildfire/skin.js, which owns the canonical list and
+// is tested on its own; the panel cannot import that module without crossing
+// its package boundary.
+const WILDFIRE_SKIN =
+  typeof globalThis.location !== 'undefined' &&
+  String(globalThis.location.pathname || '').replace(/\/+$/, '') === '/fire';
+const WILDFIRE_PANEL_LAYERS = new Set([
+  'fire-perimeters',
+  'local-firms',
+  'wind',
+  'local-datacenters',
+  'local-dams',
+]);
+
 // Presentation order is independent of catalog registration and startup order.
-const PANEL_GROUPS = [
+const FULL_PANEL_GROUPS = [
   {
     label: msg('Movement'),
     ids: [
@@ -92,6 +107,15 @@ const PANEL_GROUPS = [
     ids: ['directions', 'radio'],
   },
 ];
+
+// The wildfire skin lists the job's layers first: the fires, the wind the score
+// reads, then the exposure packs the index counts.
+const WILDFIRE_PANEL_GROUPS = [
+  { label: msg('Events'), ids: ['local-firms', 'fire-perimeters'] },
+  { label: msg('Weather'), ids: ['wind'] },
+  { label: msg('Infrastructure'), ids: ['local-datacenters', 'local-dams'] },
+];
+const PANEL_GROUPS = WILDFIRE_SKIN ? WILDFIRE_PANEL_GROUPS : FULL_PANEL_GROUPS;
 const PANEL_ORDER = PANEL_GROUPS.flatMap(({ label, ids }) =>
   ids.map((id) => ({ id, label })),
 );
@@ -293,6 +317,7 @@ export class LayerPanel {
     let previousGroup = '';
     for (const layer of layers) {
       if (!layer.showInTogglePanel) continue;
+      if (WILDFIRE_SKIN && !WILDFIRE_PANEL_LAYERS.has(layer.id)) continue;
       const group =
         PANEL_ORDER[PANEL_POSITIONS.get(layer.id)]?.label ??
         msg('Other layers');

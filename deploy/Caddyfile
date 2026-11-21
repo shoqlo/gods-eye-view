@@ -43,16 +43,25 @@
 	# Everything else: one password per person, in users.caddyfile. Adding or
 	# removing somebody is a line in that file plus a reload: no restart of the
 	# app, no data migration, and nothing for the person to install.
+	#
+	# `route` keeps the written order: the password is checked first, so the
+	# redirect never happens anonymously. The product opens on the wildfire
+	# console; `/full` is the complete console for anyone who needs the original
+	# toolbox.
 	handle {
-		basic_auth {
-			# Relative to this file: the container mounts both into /etc/caddy,
-			# and a local run finds them side by side in deploy/.
-			import users.caddyfile
-		}
-		reverse_proxy {$APP_UPSTREAM} {
-			# Keep the public Host: the app checks it against GEV_ALLOWED_HOSTS.
-			header_up Host {host}
-			header_up X-Real-IP {remote_host}
+		route {
+			basic_auth {
+				# Relative to this file: the container mounts both into /etc/caddy,
+				# and a local run finds them side by side in deploy/.
+				import users.caddyfile
+			}
+			@root path /
+			redir @root /fire 302
+			reverse_proxy {$APP_UPSTREAM} {
+				# Keep the public Host: the app checks it against GEV_ALLOWED_HOSTS.
+				header_up Host {host}
+				header_up X-Real-IP {remote_host}
+			}
 		}
 	}
 }

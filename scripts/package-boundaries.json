@@ -1734,6 +1734,8 @@
       "src/wildfire/risk.js",
       "src/wildfire/display.js",
       "src/wildfire/filter.js",
+      "src/wildfire/skin.js",
+      "src/app/wildfireSkin.js",
       "src/cyberSonarScene.js",
       "src/cyberSonar.js",
       "src/hudLayouts.js",

@@ -264,7 +264,7 @@ ${BAND_CHOICES.map(
     <p>This is not a fire-spread forecast and not a life-safety product. It does not replace an evacuation order or an official warning.</p>
     <p>Sources: NIFC WFIGS current perimeters, NOAA GFS 10&nbsp;m wind, and OpenStreetMap contributors (ODbL 1.0) for the bundled datacenter and dam packs. Refreshes every five minutes.</p>
     <p>The location view loads satellite frames from NASA GIBS and live camera frames from ALERTCalifornia directly in your browser. Neither needs a key, and neither is proxied by this server. Satellite passes are hours to days old and cloud can hide the ground; cameras are live but cover California only and may be pointed elsewhere.</p>
-    <p><a href="/">Open the live globe</a> &mdash; sign-in required.</p>
+    <p><a href="/fire">Open the wildfire console</a> &mdash; sign-in required.</p>
   </footer>
 </div>
 
