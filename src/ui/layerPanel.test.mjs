@@ -9,12 +9,12 @@ test('panel presentation places Transit between Street Traffic and Bike Share in
     'utf8',
   );
   const declarations = source.slice(
-    source.indexOf('const PANEL_GROUPS ='),
-    source.indexOf('const PANEL_POSITIONS ='),
+    source.indexOf('const FULL_PANEL_GROUPS ='),
+    source.indexOf('const WILDFIRE_PANEL_GROUPS ='),
   );
   const order = JSON.parse(
     runInNewContext(
-      `const msg = (text) => text;\n${declarations}\nJSON.stringify(PANEL_ORDER)`,
+      `const msg = (text) => text;\n${declarations}\nconst PANEL_GROUPS = FULL_PANEL_GROUPS;\nconst PANEL_ORDER = PANEL_GROUPS.flatMap(({ label, ids }) => ids.map((id) => ({ id, label })));\nJSON.stringify(PANEL_ORDER)`,
     ),
   );
   assert.deepEqual(
